@@ -909,7 +909,7 @@ async function printAutorizacion() {
     let underscore16 = 0;  // ________________ (16)
     let underscore60 = 0;  // ____________...________ (60)
     let underscore32 = 0;  // ________________________________ (32)
-    let fdoCount = 0, naCount = 0, dniSigCount = 0, checkboxCount = 0;
+    let fdoCount = 0, dniSigCount = 0, checkboxCount = 0;
 
     const allT = xmlDoc.getElementsByTagNameNS(ns, "t");
     for (let i = 0; i < allT.length; i++) {
@@ -976,6 +976,12 @@ async function printAutorizacion() {
         continue;
       }
 
+      // === "S.Coop.And" -> vaciar (el nombre de entidad va en el siguiente run) ===
+      if (txt === "S.Coop.And") {
+        t.textContent = "";
+        continue;
+      }
+
       // === CASILLAS: Marcar ☐ -> ☑ ===
       // Casilla "En nombre propio" (es "☐ " en bold, primera ocurrencia)
       if (txt === "\u2610 " || txt === "☐ ") {
@@ -998,9 +1004,7 @@ async function printAutorizacion() {
           "Fdo.: " + (fdoCount === 1 ? socioNombre : repNombre));
       }
       if (txt.includes("Nombre y apellidos: ____________________________")) {
-        naCount++;
-        t.textContent = txt.replace("Nombre y apellidos: ____________________________",
-          "Nombre y apellidos: " + (naCount === 1 ? socioNombre : repNombre));
+        t.textContent = txt.replace("\nNombre y apellidos: ____________________________", "");
       }
       if (txt.includes("DNI/NIF: ________________________")) {
         dniSigCount++;
