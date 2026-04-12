@@ -967,10 +967,10 @@ async function printAutorizacion() {
       '<w:t>' + (rep.nifFirmante || rep.nif) + '</w:t>'
     );
 
-    // 10. "S.Coop.And" -> nombre entidad (único)
+    // 10. "S.Coop.And" -> vaciar (el nombre completo va en el siguiente campo)
     xml = xml.replace(
       '<w:t>S.Coop.And</w:t>',
-      '<w:t>' + rep.nombre + '</w:t>'
+      '<w:t></w:t>'
     );
 
     // 11. Nombre entidad (1ª de 2 ocurrencias de 29 guiones)
