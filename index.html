@@ -916,6 +916,7 @@ async function printAutorizacion() {
     let underscore16 = 0;  // ________________ (16)
     let underscore60 = 0;  // ____________...________ (60)
     let underscore32 = 0;  // ________________________________ (32)
+    let underscore29_count = 0; // _____________________________ (29)
     let fdoCount = 0, dniSigCount = 0, checkboxCount = 0;
 
     const allT = xmlDoc.getElementsByTagNameNS(ns, "t");
@@ -959,15 +960,11 @@ async function printAutorizacion() {
         continue;
       }
 
-      // === Cooperativa: "_____________________________, con NIF/CIF " ===
-      if (txt === "_____________________________, con NIF/CIF ") {
-        t.textContent = rep.nombre + ", con NIF/CIF ";
-        continue;
-      }
-
-      // === NIF Cooperativa: "_____________________________, " ===
-      if (txt === "_____________________________, ") {
-        t.textContent = rep.nif + ", ";
+      // === 29 guiones bajos (2 ocurrencias): nombre entidad y NIF entidad ===
+      if (txt === "_____________________________") {
+        underscore29_count++;
+        if (underscore29_count === 1) t.textContent = rep.nombre;   // nombre entidad
+        else if (underscore29_count === 2) t.textContent = rep.nif; // NIF entidad
         continue;
       }
 
@@ -977,15 +974,15 @@ async function printAutorizacion() {
         continue;
       }
 
-      // === Fecha: "____ de __________________ de 2026" ===
+      // === Fecha: "____ de __________________ " (dia y mes, "de" y "2026" están aparte) ===
       if (txt.includes("____ de __________________")) {
-        t.textContent = hoy.getDate() + " de " + meses[hoy.getMonth()] + " de 2026";
+        t.textContent = hoy.getDate() + " de " + meses[hoy.getMonth()] + " ";
         continue;
       }
 
-      // === "como técnico de S.Coop.And" -> reemplazar con nombre entidad ===
-      if (txt.includes("S.Coop.And")) {
-        t.textContent = txt.replace("S.Coop.And", rep.nombre);
+      // === "S.Coop.And" -> reemplazar con nombre entidad ===
+      if (txt === "S.Coop.And") {
+        t.textContent = rep.nombre;
         continue;
       }
 
