@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión Ayudas FEGA — Tren de Borrascas 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0c1220;
+  --bg-card: #151d2e;
+  --bg-card-hover: #1a2540;
+  --bg-input: #111827;
+  --border: #253049;
+  --border-hover: #3b5998;
+  --text-primary: #e8ecf4;
+  --text-secondary: #8899b4;
+  --text-muted: #5a6d8a;
+  --gold: #e0a830;
+  --gold-light: #f0c040;
+  --gold-dark: #b8891a;
+  --green: #34d399;
+  --green-dark: #065f46;
+  --blue: #3b82f6;
+  --blue-dark: #1e3a5f;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ---- Subtle grid texture ---- */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(224,168,48,0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(59,130,246,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---- HEADER ---- */
+.header {
+  background: linear-gradient(135deg, #101829 0%, #172038 100%);
+  border-bottom: 2px solid var(--gold-dark);
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  flex-wrap: wrap; gap: 10px;
+}
+.header-brand {
+  display: flex; align-items: center; gap: 14px;
+}
+.header-logo {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800; color: var(--bg-deep);
+  letter-spacing: -1px; box-shadow: 0 2px 12px rgba(224,168,48,0.3);
+}
+.header-title { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+.header-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.5px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ---- BUTTONS ---- */
+.btn {
+  padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+  font-size: 13px; font-family: var(--font-body); font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--bg-card); }
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+  color: var(--bg-deep); border: none; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(224,168,48,0.25);
+}
+.btn-gold:hover { box-shadow: 0 4px 16px rgba(224,168,48,0.4); transform: translateY(-1px); }
+.btn-blue { background: var(--blue); color: #fff; border: none; font-weight: 600; }
+.btn-blue:hover { background: #2563eb; }
+.btn-green { background: var(--green); color: var(--bg-deep); border: none; font-weight: 600; }
+.btn-green:hover { background: #2ac486; }
+.btn-whatsapp { background: #25D366; color: #fff; border: none; font-weight: 600; }
+.btn-whatsapp:hover { background: #1fb855; }
+.btn-danger { border-color: var(--red); color: var(--red); }
+.btn-danger:hover { background: rgba(248,113,113,0.1); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* ---- MAIN CONTAINER ---- */
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 16px; position: relative; z-index: 1; }
+
+/* ---- CONFIG PANEL ---- */
+.config-panel {
+  background: var(--bg-card); border-bottom: 1px solid var(--border);
+  padding: 20px 24px; display: none;
+}
+.config-panel.open { display: block; }
+.config-panel h3 { color: var(--gold); font-size: 14px; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+.config-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;
+}
+.config-field label {
+  display: block; font-size: 10px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;
+}
+.config-field input {
+  width: 100%; padding: 8px 12px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg-input);
+  color: var(--text-primary); font-size: 13px; font-family: var(--font-body);
+}
+.config-field input:focus { outline: none; border-color: var(--gold-dark); }
+
+/* ---- URL CONFIG ---- */
+.url-config {
+  background: linear-gradient(135deg, rgba(224,168,48,0.08), rgba(59,130,246,0.05));
+  border: 1px dashed var(--gold-dark); border-radius: var(--radius-lg);
+  padding: 24px; margin-bottom: 20px; text-align: center;
+}
+.url-config h3 { color: var(--gold); margin-bottom: 8px; }
+.url-config p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
+.url-config input {
+  width: 100%; max-width: 600px; padding: 10px 16px;
+  border-radius: 8px; border: 1px solid var(--gold-dark);
+  background: var(--bg-input); color: var(--text-primary);
+  font-size: 14px; font-family: var(--font-mono); text-align: center;
+}
+.url-config input:focus { outline: none; border-color: var(--gold); }
+
+/* ---- STATS ---- */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--bg-card); border-radius: var(--radius);
+  padding: 16px; border: 1px solid var(--border); text-align: center;
+  transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--border-hover); }
+.stat-value { font-size: 28px; font-weight: 800; font-family: var(--font-mono); }
+.stat-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-blue { color: var(--blue); }
+.stat-orange { color: #f6ad55; }
+.stat-purple { color: var(--purple); }
+.stat-green { color: var(--green); }
+
+/* ---- SEARCH & FILTER ---- */
+.search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.search-input {
+  flex: 1; min-width: 200px; padding: 10px 16px;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text-primary);
+  font-size: 14px; font-family: var(--font-body);
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { outline: none; border-color: var(--gold-dark); }
+.filter-group { display: flex; gap: 4px; }
+.filter-btn {
+  padding: 8px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg-card);
+  color: var(--text-muted); cursor: pointer; font-size: 12px;
+  font-family: var(--font-body); font-weight: 500; transition: all 0.15s;
+}
+.filter-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+.filter-btn.active {
+  border: 2px solid var(--gold); background: rgba(224,168,48,0.1);
+  color: var(--gold); font-weight: 700;
+}
+
+/* ---- SOCIOS LIST ---- */
+.socios-list { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
+.socios-list::-webkit-scrollbar { width: 6px; }
+.socios-list::-webkit-scrollbar-track { background: var(--bg-deep); border-radius: 3px; }
+.socios-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.socio-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: var(--bg-card); border-radius: var(--radius);
+  cursor: pointer; border: 1px solid var(--border); transition: all 0.15s;
+  gap: 12px; flex-wrap: wrap;
+}
+.socio-row:hover { border-color: var(--gold-dark); background: var(--bg-card-hover); }
+.socio-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 200px; }
+.socio-cod { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); min-width: 40px; }
+.socio-name { font-weight: 600; font-size: 14px; }
+.socio-nif { font-size: 12px; color: var(--text-secondary); }
+.socio-right { display: flex; align-items: center; gap: 12px; }
+.socio-importe { font-weight: 700; font-size: 14px; color: var(--green); font-family: var(--font-mono); }
+
+/* ---- STATUS BADGES ---- */
+.badge {
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  white-space: nowrap;
+}
+.badge-pendiente { background: #fef3c7; color: #92400e; }
+.badge-autorizacion { background: #dbeafe; color: #1e40af; }
+.badge-firmada { background: #e0e7ff; color: #3730a3; }
+.badge-aceptada { background: #d1fae5; color: #065f46; }
+.badge-notificado { background: #ede9fe; color: #5b21b6; }
+.badge-tramitado { background: #d1fae5; color: #047857; }
+
+/* ---- DETAIL VIEW ---- */
+.detail-header {
+  background: var(--bg-card); border-radius: var(--radius-lg);
+  padding: 20px; border: 1px solid var(--border); margin-bottom: 16px;
+}
+.detail-cod { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.detail-name { font-size: 22px; font-weight: 700; margin: 4px 0 10px 0; }
+.detail-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+.detail-meta strong { color: var(--text-muted); }
+.detail-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.detail-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ---- STEPPER ---- */
+.stepper {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; overflow-x: auto; gap: 4px; padding: 8px 0;
+}
+.step {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;
+}
+.step-circle {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; transition: all 0.3s;
+  border: 2px solid transparent;
+}
+.step-circle.done { background: var(--green); color: var(--bg-deep); }
+.step-circle.active { background: var(--gold); color: var(--bg-deep); border: 3px solid var(--gold-light); box-shadow: 0 0 16px rgba(224,168,48,0.3); }
+.step-circle.pending { background: #2d3a50; color: var(--text-muted); }
+.step-label { font-size: 10px; text-align: center; font-weight: 500; }
+.step-label.done { color: var(--green); }
+.step-label.active { color: var(--gold); font-weight: 700; }
+.step-label.pending { color: var(--text-muted); }
+.step-connector { height: 2px; flex: 0 0 16px; margin-bottom: 22px; }
+.step-connector.done { background: var(--green); }
+.step-connector.pending { background: #2d3a50; }
+
+/* ---- STEP CONTENT ---- */
+.step-content {
+  background: var(--bg-card); border-radius: var(--radius-lg);
+  padding: 24px; border: 1px solid var(--border); min-height: 200px;
+}
+.step-content h3 { color: var(--gold); font-size: 16px; margin-bottom: 12px; }
+.step-content p { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+
+/* ---- FILE ATTACH ---- */
+.file-drop {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 24px; text-align: center; cursor: pointer;
+  transition: border-color 0.2s; margin-bottom: 16px;
+}
+.file-drop:hover { border-color: var(--gold-dark); }
+.file-drop.has-file { border-color: var(--green); border-style: solid; background: rgba(52,211,153,0.05); }
+.file-info { color: var(--green); font-weight: 600; }
+
+/* ---- WHATSAPP PREVIEW ---- */
+.wa-preview {
+  background: var(--bg-input); border-radius: var(--radius);
+  padding: 16px; border: 1px solid var(--border); margin-bottom: 16px;
+  font-size: 13px; line-height: 1.6;
+}
+.wa-preview-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+/* ---- COMPLETION ---- */
+.completion { text-align: center; padding: 30px; }
+.completion-icon { font-size: 72px; margin-bottom: 16px; }
+.completion h3 { color: var(--green); font-size: 22px; margin-bottom: 10px; }
+
+/* ---- LOADING ---- */
+.loading { text-align: center; padding: 60px; }
+.spinner {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--gold); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 640px) {
+  .header { padding: 10px 14px; }
+  .header-title { font-size: 15px; }
+  .container { padding: 12px 10px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 22px; }
+  .stepper { gap: 2px; }
+  .step-circle { width: 34px; height: 34px; font-size: 14px; }
+  .step-label { font-size: 9px; }
+  .socio-right { flex-wrap: wrap; }
+}
+
+/* ---- ANIMATIONS ---- */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.animate-in { animation: fadeIn 0.3s ease-out; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo">FG</div>
+    <div>
+      <div class="header-title">Gestión Ayudas FEGA</div>
+      <div class="header-sub">Tren de Borrascas 2026 · Ministerio de Agricultura</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn" onclick="toggleConfig()" id="btnConfig">⚙ Configuración</button>
+    <button class="btn" onclick="goToList()" id="btnVolver" style="display:none; border-color: var(--gold); color: var(--gold);">← Volver</button>
+  </div>
+</div>
+
+<!-- CONFIG PANEL -->
+<div class="config-panel" id="configPanel">
+  <h3>Datos del Representante</h3>
+  <div class="config-grid">
+    <div class="config-field"><label>Nombre / Razón Social</label><input id="cfgNombre" value="COOPERATIVA OLIVARERA Y FRUTERA SAN ISIDRO LABRADOR"></div>
+    <div class="config-field"><label>NIF / CIF</label><input id="cfgNif" value="F23004090"></div>
+    <div class="config-field"><label>Dirección</label><input id="cfgDireccion" value="Ctra. Circunvalación, s/n, 23620 Mengíbar, Jaén"></div>
+    <div class="config-field"><label>Cargo</label><input id="cfgCargo" value="Representante legal"></div>
+    <div class="config-field"><label>Nombre del firmante</label><input id="cfgFirmante" value=""></div>
+    <div class="config-field"><label>NIF del firmante</label><input id="cfgNifFirmante" value=""></div>
+  </div>
+  <h3 style="margin-top:20px;">Conexión</h3>
+  <div class="config-grid">
+    <div class="config-field" style="grid-column: span 2;">
+      <label>URL del Google Apps Script (Web App)</label>
+      <input id="cfgApiUrl" placeholder="https://script.google.com/macros/s/XXXXXXXXX/exec" value="">
+    </div>
+    <div class="config-field" style="grid-column: span 2;">
+      <label>Repositorio GitHub (para archivos)</label>
+      <input id="cfgGithubRepo" placeholder="usuario/nombre-repo" value="">
+    </div>
+    <div class="config-field" style="grid-column: span 2;">
+      <label>Token GitHub (Personal Access Token)</label>
+      <input id="cfgGithubToken" type="password" placeholder="ghp_XXXXXXXXXXXX" value="">
+    </div>
+  </div>
+  <div style="margin-top:14px; display:flex; gap:8px;">
+    <button class="btn btn-gold" onclick="saveConfig()">Guardar configuración</button>
+    <button class="btn btn-blue" onclick="testConnection()">Probar conexión</button>
+  </div>
+  <div id="configMsg" style="margin-top:10px; font-size:13px;"></div>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+  <!-- API URL prompt (if not configured) -->
+  <div id="urlPrompt" class="url-config" style="display:none;">
+    <h3>🔗 Configurar conexión</h3>
+    <p>Introduce la URL de tu Google Apps Script desplegado como Web App</p>
+    <input id="quickApiUrl" placeholder="https://script.google.com/macros/s/.../exec" onkeydown="if(event.key==='Enter')quickSetUrl()">
+    <div style="margin-top:12px;"><button class="btn btn-gold" onclick="quickSetUrl()">Conectar</button></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid" id="statsGrid" style="display:none;"></div>
+
+  <!-- LIST VIEW -->
+  <div id="listView" style="display:none;">
+    <div class="search-bar">
+      <input class="search-input" id="searchInput" placeholder="🔍 Buscar por nombre, NIF o código..." oninput="renderList()">
+      <div class="filter-group">
+        <button class="filter-btn active" data-filter="todos" onclick="setFilter(this)">Todos</button>
+        <button class="filter-btn" data-filter="pendiente" onclick="setFilter(this)">Pendientes</button>
+        <button class="filter-btn" data-filter="en_curso" onclick="setFilter(this)">En curso</button>
+        <button class="filter-btn" data-filter="tramitado" onclick="setFilter(this)">Tramitados</button>
+      </div>
+    </div>
+    <div class="socios-list" id="sociosList"></div>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div id="detailView" style="display:none;"></div>
+
+  <!-- LOADING -->
+  <div id="loadingView" class="loading" style="display:none;">
+    <div class="spinner"></div>
+    <p style="color: var(--text-secondary);">Cargando datos de socios...</p>
+  </div>
+</div>
+
+<script>
+// ============ STATE ============
+let socios = [];
+let selectedSocio = null;
+let currentStep = 0;
+let currentFilter = "todos";
+let attachedFile = null;
+let config = {
+  apiUrl: "",
+  githubRepo: "",
+  githubToken: "",
+  representante: {
+    nombre: "COOPERATIVA OLIVARERA Y FRUTERA SAN ISIDRO LABRADOR",
+    nif: "F23004090",
+    direccion: "Ctra. Circunvalación, s/n, 23620 Mengíbar, Jaén",
+    cargo: "Representante legal",
+    firmante: "",
+    nifFirmante: ""
+  }
+};
+
+const STATUS_MAP = {
+  pendiente: { label: "Pendiente", badge: "badge-pendiente" },
+  autorizacion: { label: "Autorización generada", badge: "badge-autorizacion" },
+  firmada: { label: "Firmada adjuntada", badge: "badge-firmada" },
+  aceptada: { label: "Aceptada en FEGA", badge: "badge-aceptada" },
+  notificado: { label: "WhatsApp enviado", badge: "badge-notificado" },
+  tramitado: { label: "Tramitado ✓", badge: "badge-tramitado" }
+};
+const STATUS_KEYS = Object.keys(STATUS_MAP);
+
+const STEPS = [
+  { id: 1, label: "Selección", icon: "👤" },
+  { id: 2, label: "Autorización", icon: "📄" },
+  { id: 3, label: "Adjuntar firmada", icon: "📎" },
+  { id: 4, label: "Aceptar FEGA", icon: "✅" },
+  { id: 5, label: "WhatsApp", icon: "💬" },
+  { id: 6, label: "Completado", icon: "🏁" }
+];
+
+// ============ INIT ============
+window.addEventListener("DOMContentLoaded", () => {
+  loadConfig();
+  if (config.apiUrl) {
+    fetchSocios();
+  } else {
+    document.getElementById("urlPrompt").style.display = "block";
+  }
+});
+
+// ============ CONFIG ============
+function loadConfig() {
+  try {
+    const saved = localStorage.getItem("fega-config");
+    if (saved) {
+      config = { ...config, ...JSON.parse(saved) };
+      document.getElementById("cfgNombre").value = config.representante.nombre;
+      document.getElementById("cfgNif").value = config.representante.nif;
+      document.getElementById("cfgDireccion").value = config.representante.direccion;
+      document.getElementById("cfgCargo").value = config.representante.cargo;
+      document.getElementById("cfgFirmante").value = config.representante.firmante || "";
+      document.getElementById("cfgNifFirmante").value = config.representante.nifFirmante || "";
+      document.getElementById("cfgApiUrl").value = config.apiUrl;
+      document.getElementById("cfgGithubRepo").value = config.githubRepo || "";
+      document.getElementById("cfgGithubToken").value = config.githubToken || "";
+    }
+  } catch(e) {}
+}
+
+function saveConfig() {
+  config.representante = {
+    nombre: document.getElementById("cfgNombre").value,
+    nif: document.getElementById("cfgNif").value,
+    direccion: document.getElementById("cfgDireccion").value,
+    cargo: document.getElementById("cfgCargo").value,
+    firmante: document.getElementById("cfgFirmante").value,
+    nifFirmante: document.getElementById("cfgNifFirmante").value
+  };
+  config.apiUrl = document.getElementById("cfgApiUrl").value.trim();
+  config.githubRepo = document.getElementById("cfgGithubRepo").value.trim();
+  config.githubToken = document.getElementById("cfgGithubToken").value.trim();
+  localStorage.setItem("fega-config", JSON.stringify(config));
+  showConfigMsg("✓ Configuración guardada", "var(--green)");
+}
+
+function toggleConfig() {
+  document.getElementById("configPanel").classList.toggle("open");
+}
+
+function showConfigMsg(text, color) {
+  const el = document.getElementById("configMsg");
+  el.textContent = text;
+  el.style.color = color || "var(--text-secondary)";
+  setTimeout(() => el.textContent = "", 4000);
+}
+
+function quickSetUrl() {
+  const url = document.getElementById("quickApiUrl").value.trim();
+  if (!url) return;
+  config.apiUrl = url;
+  document.getElementById("cfgApiUrl").value = url;
+  saveConfig();
+  document.getElementById("urlPrompt").style.display = "none";
+  fetchSocios();
+}
+
+async function testConnection() {
+  const url = document.getElementById("cfgApiUrl").value.trim();
+  if (!url) { showConfigMsg("⚠ Introduce la URL primero", "var(--red)"); return; }
+  showConfigMsg("⏳ Probando conexión...", "var(--gold)");
+  try {
+    const res = await fetch(url + "?action=getStats");
+    const data = await res.json();
+    if (data.success) {
+      showConfigMsg(`✓ Conexión OK — ${data.total} socios encontrados`, "var(--green)");
+    } else {
+      showConfigMsg("✗ Respuesta inesperada: " + JSON.stringify(data), "var(--red)");
+    }
+  } catch(e) {
+    showConfigMsg("✗ Error de conexión: " + e.message, "var(--red)");
+  }
+}
+
+// ============ DATA FETCHING ============
+async function fetchSocios() {
+  showView("loading");
+  try {
+    const res = await fetch(config.apiUrl + "?action=getSocios");
+    const data = await res.json();
+    if (data.success) {
+      socios = data.socios.map(s => ({
+        ...s,
+        importe: parseImporte(s.importe),
+        importeOriginal: String(s.importe || ""),
+        status: s.estadoTramite || "pendiente"
+      }));
+      renderStats();
+      renderList();
+      showView("list");
+    } else {
+      alert("Error al cargar datos: " + (data.error || "desconocido"));
+    }
+  } catch(e) {
+    alert("Error de conexión: " + e.message + "\n\nVerifica la URL del Apps Script en Configuración.");
+    document.getElementById("urlPrompt").style.display = "block";
+    showView("none");
+  }
+}
+
+function parseImporte(val) {
+  if (!val) return 0;
+  const s = String(val).trim();
+  if (s.includes("|")) {
+    return s.split("|").reduce((sum, p) => sum + parseImporte(p.trim()), 0);
+  }
+  let n = parseFloat(s);
+  if (!isNaN(n)) return n;
+  n = parseFloat(s.replace(/\./g, "").replace(",", "."));
+  return isNaN(n) ? 0 : n;
+}
+
+function formatCurrency(n) {
+  if (!n) return "0,00 €";
+  return n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+}
+
+// ============ API CALLS ============
+async function updateSocioStatus(cod, status, paso) {
+  try {
+    await fetch(config.apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "updateEstado", cod, estadoTramite: status, paso }),
+      mode: "no-cors"
+    });
+    // Update local state
+    socios = socios.map(s => s.cod == cod ? { ...s, status } : s);
+    renderStats();
+  } catch(e) {
+    console.error("Error updating status:", e);
+  }
+}
+
+async function uploadToGithub(filePath, fileContent, commitMessage) {
+  if (!config.githubRepo || !config.githubToken) {
+    alert("Configura el repositorio y token de GitHub en Configuración");
+    return false;
+  }
+  try {
+    const res = await fetch(`https://api.github.com/repos/${config.githubRepo}/contents/${filePath}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": "token " + config.githubToken,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: commitMessage,
+        content: fileContent // base64
+      })
+    });
+    if (res.ok) return true;
+    const err = await res.json();
+    alert("Error subiendo a GitHub: " + (err.message || "desconocido"));
+    return false;
+  } catch(e) {
+    alert("Error de conexión con GitHub: " + e.message);
+    return false;
+  }
+}
+
+// ============ VIEWS ============
+function showView(name) {
+  document.getElementById("loadingView").style.display = name === "loading" ? "block" : "none";
+  document.getElementById("listView").style.display = name === "list" ? "block" : "none";
+  document.getElementById("detailView").style.display = name === "detail" ? "block" : "none";
+  document.getElementById("statsGrid").style.display = (name === "list" || name === "detail") ? "grid" : "none";
+  document.getElementById("btnVolver").style.display = name === "detail" ? "inline-flex" : "none";
+}
+
+function goToList() {
+  selectedSocio = null;
+  showView("list");
+  renderList();
+}
+
+// ============ STATS ============
+function renderStats() {
+  const total = socios.length;
+  const pendientes = socios.filter(s => s.status === "pendiente").length;
+  const enCurso = socios.filter(s => s.status !== "pendiente" && s.status !== "tramitado").length;
+  const tramitados = socios.filter(s => s.status === "tramitado").length;
+
+  document.getElementById("statsGrid").innerHTML = `
+    <div class="stat-card"><div class="stat-value stat-blue">${total}</div><div class="stat-label">Total socios</div></div>
+    <div class="stat-card"><div class="stat-value stat-orange">${pendientes}</div><div class="stat-label">Pendientes</div></div>
+    <div class="stat-card"><div class="stat-value stat-purple">${enCurso}</div><div class="stat-label">En curso</div></div>
+    <div class="stat-card"><div class="stat-value stat-green">${tramitados}</div><div class="stat-label">Tramitados</div></div>
+  `;
+}
+
+// ============ LIST ============
+function setFilter(el) {
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  el.classList.add("active");
+  currentFilter = el.dataset.filter;
+  renderList();
+}
+
+function renderList() {
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const filtered = socios.filter(s => {
+    const matchSearch = !search ||
+      s.nombre.toLowerCase().includes(search) ||
+      s.nif.toLowerCase().includes(search) ||
+      String(s.cod).includes(search);
+    const matchFilter = currentFilter === "todos" ||
+      (currentFilter === "pendiente" && s.status === "pendiente") ||
+      (currentFilter === "tramitado" && s.status === "tramitado") ||
+      (currentFilter === "en_curso" && s.status !== "pendiente" && s.status !== "tramitado");
+    return matchSearch && matchFilter;
+  });
+
+  const list = document.getElementById("sociosList");
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">No se encontraron socios con ese criterio</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => {
+    const st = STATUS_MAP[s.status] || STATUS_MAP.pendiente;
+    return `
+      <div class="socio-row" onclick="selectSocio(${s.cod})">
+        <div class="socio-info">
+          <span class="socio-cod">${s.cod}</span>
+          <div>
+            <div class="socio-name">${s.nombre}</div>
+            <div class="socio-nif">${s.nif}</div>
+          </div>
+        </div>
+        <div class="socio-right">
+          <span class="socio-importe">${formatCurrency(s.importe)}</span>
+          <span class="badge ${st.badge}">${st.label}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ============ DETAIL ============
+function selectSocio(cod) {
+  selectedSocio = socios.find(s => s.cod == cod);
+  if (!selectedSocio) return;
+  currentStep = Math.max(0, STATUS_KEYS.indexOf(selectedSocio.status));
+  attachedFile = null;
+  showView("detail");
+  renderDetail();
+}
+
+function renderDetail() {
+  const s = selectedSocio;
+  const st = STATUS_MAP[s.status] || STATUS_MAP.pendiente;
+  const rep = config.representante;
+
+  let stepperHTML = STEPS.map((step, idx) => {
+    const isDone = currentStep > idx;
+    const isActive = currentStep === idx;
+    const cls = isDone ? "done" : isActive ? "active" : "pending";
+    const circle = isDone ? "✓" : step.icon;
+    let html = `<div class="step"><div class="step-circle ${cls}">${circle}</div><div class="step-label ${cls}">${step.label}</div></div>`;
+    if (idx < STEPS.length - 1) {
+      html += `<div class="step-connector ${isDone ? 'done' : 'pending'}"></div>`;
+    }
+    return html;
+  }).join("");
+
+  let stepContent = "";
+
+  // STEP 0: Selección
+  if (currentStep === 0) {
+    stepContent = `
+      <h3>Paso 1: Socio seleccionado</h3>
+      <p>El socio <strong style="color:var(--text-primary)">${s.nombre}</strong> ha sido seleccionado para iniciar el trámite de la ayuda FEGA.</p>
+      <p>Pulse "Siguiente" para generar el documento de Autorización Expresa de Representación.</p>
+      <div style="margin-top:16px"><button class="btn btn-gold" onclick="advanceStep()">Siguiente →</button></div>
+    `;
+  }
+
+  // STEP 1: Autorización
+  else if (currentStep === 1) {
+    stepContent = `
+      <h3>Paso 2: Autorización Expresa de Representación</h3>
+      <p>Genere e imprima el documento de autorización con los datos del socio y del representante.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px">
+        <button class="btn btn-blue" onclick="printAutorizacion()">🖨 Imprimir Autorización</button>
+        <button class="btn btn-gold" onclick="advanceStep()">Siguiente →</button>
+      </div>
+    `;
+  }
+
+  // STEP 2: Adjuntar firmada
+  else if (currentStep === 2) {
+    const fileHTML = attachedFile
+      ? `<div class="file-drop has-file" onclick="document.getElementById('fileInput').click()">
+           <div class="file-info">✓ ${attachedFile.name} (${(attachedFile.size/1024).toFixed(1)} KB)</div>
+           <div style="color:var(--text-muted); font-size:11px; margin-top:4px">Click para cambiar</div>
+         </div>`
+      : `<div class="file-drop" onclick="document.getElementById('fileInput').click()">
+           <div style="font-size:32px; margin-bottom:8px">📎</div>
+           <div style="color:var(--text-secondary)">Click para seleccionar el archivo escaneado</div>
+           <div style="color:var(--text-muted); font-size:11px; margin-top:4px">PDF, JPG o PNG</div>
+         </div>`;
+
+    stepContent = `
+      <h3>Paso 3: Adjuntar Autorización Firmada</h3>
+      <p>Escanee la autorización firmada por el socio y adjúntela aquí. Se subirá al repositorio de GitHub.</p>
+      <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileAttach(this)" style="display:none">
+      ${fileHTML}
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn btn-blue" onclick="uploadAutorizacion()" ${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir a GitHub</button>
+        <button class="btn btn-gold" onclick="advanceStep()">Siguiente →</button>
+      </div>
+    `;
+  }
+
+  // STEP 3: Aceptación FEGA
+  else if (currentStep === 3) {
+    stepContent = `
+      <h3>Paso 4: Aceptación en la Web del FEGA</h3>
+      <p>Acceda a la plataforma del FEGA y acepte la ayuda en nombre del socio. Una vez completado, adjunte el justificante PDF descargado y pulse "Marcar como aceptada".</p>
+      <div style="margin-bottom:16px">
+        <a href="https://www.fega.gob.es" target="_blank" rel="noopener" class="btn btn-blue" style="text-decoration:none">🌐 Abrir Web FEGA</a>
+      </div>
+      <input type="file" id="justificanteInput" accept=".pdf" onchange="handleJustificante(this)" style="display:none">
+      <div class="file-drop ${attachedFile ? 'has-file' : ''}" onclick="document.getElementById('justificanteInput').click()" style="margin-bottom:16px">
+        ${attachedFile
+          ? `<div class="file-info">✓ Justificante: ${attachedFile.name}</div>`
+          : `<div style="color:var(--text-secondary)">📄 Adjuntar justificante PDF del FEGA</div>`}
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn btn-blue" onclick="uploadJustificante()" ${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir justificante</button>
+        <button class="btn btn-gold" onclick="advanceStep()">Marcar como aceptada →</button>
+      </div>
+    `;
+  }
+
+  // STEP 4: WhatsApp
+  else if (currentStep === 4) {
+    stepContent = `
+      <h3>Paso 5: Notificación por WhatsApp</h3>
+      <p>Envíe un mensaje de WhatsApp al socio informándole de que el trámite ha sido completado.</p>
+      <div class="wa-preview">
+        <div class="wa-preview-label">Vista previa del mensaje</div>
+        <p>Estimado/a socio/a <strong>${s.nombre}</strong>,</p>
+        <p>Le informamos que se ha completado el trámite de aceptación de la ayuda del FEGA por daños ocasionados por el tren de borrascas de 2026.</p>
+        <p>Beneficiario: ${s.nombreFega || s.nombre}<br>NIF: ${s.nif}<br>Importe: <strong style="color:var(--green)">${formatCurrency(s.importe)}</strong></p>
+        <p>Atentamente,<br>${rep.nombre}</p>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn btn-whatsapp" onclick="sendWhatsApp()">💬 Enviar WhatsApp</button>
+        <button class="btn btn-gold" onclick="advanceStep()">Siguiente →</button>
+      </div>
+    `;
+  }
+
+  // STEP 5: Completado
+  else if (currentStep === 5) {
+    stepContent = `
+      <div class="completion">
+        <div class="completion-icon">🎉</div>
+        <h3>¡Trámite completado!</h3>
+        <p style="color:var(--text-secondary)">El socio <strong style="color:var(--text-primary)">${s.nombre}</strong> ha sido marcado como <strong style="color:var(--green)">tramitado</strong>.</p>
+        <p style="color:var(--text-secondary); margin-top:4px">Importe: <strong style="color:var(--green)">${formatCurrency(s.importe)}</strong></p>
+        <div style="margin-top:24px"><button class="btn btn-gold" onclick="goToList()">← Volver al listado</button></div>
+      </div>
+    `;
+  }
+
+  document.getElementById("detailView").innerHTML = `
+    <div class="animate-in">
+      <div class="detail-header">
+        <div class="detail-top">
+          <div>
+            <div class="detail-cod">Socio nº ${s.cod}</div>
+            <div class="detail-name">${s.nombre}</div>
+            <div class="detail-meta">
+              <span><strong>NIF:</strong> ${s.nif}</span>
+              <span><strong>Nombre FEGA:</strong> ${s.nombreFega || "—"}</span>
+              <span><strong>Importe:</strong> <span style="color:var(--green); font-weight:700">${formatCurrency(s.importe)}</span></span>
+              ${s.importeOriginal && s.importeOriginal.includes("|") ? `<span><strong>Detalle:</strong> ${s.importeOriginal}</span>` : ''}
+            </div>
+          </div>
+          <div class="detail-actions">
+            <span class="badge ${st.badge}">${st.label}</span>
+            <button class="btn btn-sm btn-danger" onclick="resetSocio()">Reiniciar</button>
+          </div>
+        </div>
+      </div>
+      <div class="stepper">${stepperHTML}</div>
+      <div class="step-content">${stepContent}</div>
+    </div>
+  `;
+}
+
+// ============ ACTIONS ============
+async function advanceStep() {
+  if (!selectedSocio) return;
+  const nextIdx = Math.min(currentStep + 1, STATUS_KEYS.length - 1);
+  const nextStatus = STATUS_KEYS[nextIdx];
+  currentStep = nextIdx;
+  selectedSocio.status = nextStatus;
+  await updateSocioStatus(selectedSocio.cod, nextStatus, nextIdx);
+  attachedFile = null;
+  renderDetail();
+}
+
+async function resetSocio() {
+  if (!selectedSocio) return;
+  if (!confirm("¿Seguro que deseas reiniciar el trámite de este socio?")) return;
+  currentStep = 0;
+  selectedSocio.status = "pendiente";
+  await updateSocioStatus(selectedSocio.cod, "pendiente", 0);
+  attachedFile = null;
+  renderDetail();
+}
+
+function printAutorizacion() {
+  const s = selectedSocio;
+  const rep = config.representante;
+  const w = window.open("", "_blank");
+  w.document.write(`<!DOCTYPE html><html><head><title>Autorización - ${s.nombre}</title>
+<style>
+  @page { size: A4; margin: 20mm; }
+  body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.7; color: #000; margin: 0; padding: 25mm; }
+  .header { text-align: center; margin-bottom: 30px; }
+  .header h1 { font-size: 15pt; text-transform: uppercase; letter-spacing: 2px; margin: 0; border-bottom: 2px solid #000; padding-bottom: 10px; }
+  .header h2 { font-size: 12pt; margin: 8px 0 0 0; font-weight: normal; color: #444; }
+  .section { margin: 24px 0; }
+  .section-title { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #999; padding-bottom: 4px; letter-spacing: 0.5px; }
+  .data-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  .data-table td { padding: 5px 8px; font-size: 11pt; vertical-align: top; }
+  .data-table td:first-child { font-weight: bold; width: 180px; color: #333; }
+  .body-text { text-align: justify; margin: 24px 0; }
+  .body-text p { margin: 10px 0; }
+  .signatures { display: flex; justify-content: space-between; margin-top: 80px; }
+  .signature-box { text-align: center; width: 40%; }
+  .signature-line { border-top: 1px solid #000; margin-top: 70px; padding-top: 8px; font-size: 10pt; }
+  .footer { text-align: center; margin-top: 50px; font-size: 10pt; color: #666; }
+</style></head><body>
+<div class="header">
+  <h1>Autorización Expresa de Representación</h1>
+  <h2>Ayudas FEGA — Daños por Tren de Borrascas 2026</h2>
+</div>
+
+<div class="section">
+  <div class="section-title">Datos del Interesado / Beneficiario</div>
+  <table class="data-table">
+    <tr><td>Nombre / Razón Social:</td><td>${s.nombreFega || s.nombre}</td></tr>
+    <tr><td>NIF / CIF:</td><td>${s.nif}</td></tr>
+    <tr><td>Código de socio:</td><td>${s.cod}</td></tr>
+    <tr><td>Importe de la ayuda:</td><td>${formatCurrency(s.importe)}</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-title">Datos del Representante Autorizado</div>
+  <table class="data-table">
+    <tr><td>Nombre / Razón Social:</td><td>${rep.nombre}</td></tr>
+    <tr><td>NIF / CIF:</td><td>${rep.nif}</td></tr>
+    <tr><td>Dirección:</td><td>${rep.direccion}</td></tr>
+    <tr><td>Cargo:</td><td>${rep.cargo}</td></tr>
+    ${rep.firmante ? `<tr><td>Persona firmante:</td><td>${rep.firmante}</td></tr>` : ''}
+    ${rep.nifFirmante ? `<tr><td>NIF firmante:</td><td>${rep.nifFirmante}</td></tr>` : ''}
+  </table>
+</div>
+
+<div class="body-text">
+  <p>D./Dña. <strong>${s.nombreFega || s.nombre}</strong>, con NIF <strong>${s.nif}</strong>, en calidad de interesado/a y beneficiario/a de las ayudas concedidas por el Fondo Español de Garantía Agraria (FEGA) del Ministerio de Agricultura, Pesca y Alimentación, con motivo de los daños ocasionados por el tren de borrascas del año 2026,</p>
+  <p><strong>AUTORIZA EXPRESAMENTE</strong></p>
+  <p>a <strong>${rep.nombre}</strong>, con NIF <strong>${rep.nif}</strong>, con domicilio en <strong>${rep.direccion}</strong>, para que en su nombre y representación realice cuantos trámites sean necesarios ante el FEGA en relación con la solicitud, gestión y aceptación de la citada ayuda, incluyendo:</p>
+  <p style="margin-left: 20px;">
+    — La presentación de la solicitud y documentación complementaria.<br>
+    — La aceptación de la ayuda concedida.<br>
+    — La recepción de notificaciones y comunicaciones.<br>
+    — Cualesquiera otros trámites relacionados con el procedimiento.
+  </p>
+  <p>Esta autorización se otorga con carácter específico para el procedimiento de ayudas FEGA por daños del tren de borrascas 2026 y tendrá validez hasta la finalización del mismo.</p>
+</div>
+
+<div class="footer">
+  <p>En _________________, a ______ de _________________ de 2026</p>
+</div>
+
+<div class="signatures">
+  <div class="signature-box">
+    <div class="signature-line">Fdo.: ${s.nombreFega || s.nombre}<br>(El/La autorizante)</div>
+  </div>
+  <div class="signature-box">
+    <div class="signature-line">Fdo.: ${rep.firmante || rep.nombre}<br>(El/La representante)</div>
+  </div>
+</div>
+</body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 300);
+}
+
+function handleFileAttach(input) {
+  const file = input.files[0];
+  if (file) {
+    attachedFile = file;
+    renderDetail();
+  }
+}
+
+function handleJustificante(input) {
+  const file = input.files[0];
+  if (file) {
+    attachedFile = file;
+    renderDetail();
+  }
+}
+
+async function uploadAutorizacion() {
+  if (!attachedFile) return;
+  const reader = new FileReader();
+  reader.onload = async function() {
+    const base64 = reader.result.split(",")[1];
+    const ext = attachedFile.name.split(".").pop();
+    const path = `autorizaciones/${selectedSocio.cod}_${selectedSocio.nif}_autorizacion.${ext}`;
+    const ok = await uploadToGithub(path, base64, `Autorización firmada socio ${selectedSocio.cod} - ${selectedSocio.nombre}`);
+    if (ok) alert("✓ Autorización subida correctamente a GitHub");
+  };
+  reader.readAsDataURL(attachedFile);
+}
+
+async function uploadJustificante() {
+  if (!attachedFile) return;
+  const reader = new FileReader();
+  reader.onload = async function() {
+    const base64 = reader.result.split(",")[1];
+    const ext = attachedFile.name.split(".").pop();
+    const path = `justificantes/${selectedSocio.cod}_${selectedSocio.nif}_justificante.${ext}`;
+    const ok = await uploadToGithub(path, base64, `Justificante FEGA socio ${selectedSocio.cod} - ${selectedSocio.nombre}`);
+    if (ok) alert("✓ Justificante subido correctamente a GitHub");
+  };
+  reader.readAsDataURL(attachedFile);
+}
+
+function sendWhatsApp() {
+  const s = selectedSocio;
+  const rep = config.representante;
+  const msg = encodeURIComponent(
+    `Estimado/a socio/a ${s.nombre},\n\n` +
+    `Le informamos que se ha completado el trámite de aceptación de la ayuda del FEGA por daños ocasionados por el tren de borrascas de 2026.\n\n` +
+    `Datos del trámite:\n` +
+    `- Beneficiario: ${s.nombreFega || s.nombre}\n` +
+    `- NIF: ${s.nif}\n` +
+    `- Importe: ${formatCurrency(s.importe)}\n\n` +
+    `Se adjunta justificante del trámite.\n\n` +
+    `Atentamente,\n${rep.nombre}`
+  );
+  window.open(`https://wa.me/?text=${msg}`, "_blank");
+}
+</script>
+</body>
+</html>
