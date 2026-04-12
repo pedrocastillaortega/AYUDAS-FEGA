@@ -456,16 +456,13 @@ function loadConfig() {
     const saved = localStorage.getItem("fega-config");
     if (saved) {
       const parsed = JSON.parse(saved);
-      config = { ...config, ...parsed };
-      // Migrar datos antiguos de cooperativa si existen
-      // Migrar datos antiguos si existen
-      if (!config.representante.firmante || config.representante.nombre === "COOPERATIVA OLIVARERA Y FRUTERA SAN ISIDRO LABRADOR") {
-        config.representante.nombre = "ACEITES GUADALQUIVIR SCA";
-        config.representante.nif = "F23661200";
-        config.representante.direccion = "CARRETERA DE ESPELUY, S/N, VILLANUEVA DE LA REINA (JAEN)";
-        config.representante.firmante = "PEDRO CASTILLA ORTEGA";
-        config.representante.nifFirmante = "52545400Z";
-        localStorage.setItem("fega-config", JSON.stringify(config));
+      // Preservar apiUrl, githubRepo, githubToken
+      if (parsed.apiUrl) config.apiUrl = parsed.apiUrl;
+      if (parsed.githubRepo) config.githubRepo = parsed.githubRepo;
+      if (parsed.githubToken) config.githubToken = parsed.githubToken;
+      // Merge representante sin perder los nuevos defaults
+      if (parsed.representante) {
+        config.representante = { ...config.representante, ...parsed.representante };
       }
       document.getElementById("cfgNombre").value = config.representante.nombre;
       document.getElementById("cfgNif").value = config.representante.nif;
