@@ -1041,10 +1041,8 @@ async function printAutorizacion() {
       '<w:t>DNI/NIF: ' + (rep.nifFirmante || rep.nif) + '</w:t>'
     );
 
-    // Serializar XML modificado
-    const serializer = new XMLSerializer();
-    const newXml = serializer.serializeToString(xmlDoc);
-    zip.file("word/document.xml", newXml);
+    // Guardar XML modificado en el zip
+    zip.file("word/document.xml", xml);
 
     // Generar y descargar docx
     const blob = await zip.generateAsync({
