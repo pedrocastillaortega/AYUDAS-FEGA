@@ -768,18 +768,19 @@ function renderDetail() {
   else if (currentStep === 3) {
     stepContent = `
       <h3>Paso 4: Aceptación en la Web del FEGA</h3>
-      <p>Acceda a la plataforma del FEGA y acepte la ayuda en nombre del socio. Una vez completado, adjunte el justificante PDF descargado y pulse "Marcar como aceptada".</p>
+      <p>Acceda a la plataforma del FEGA y acepte la ayuda en nombre del socio. Una vez completado, adjunte el justificante PDF descargado del FEGA.</p>
+      <p style="color:var(--gold); font-size:12px">⚠ El justificante se renombrará automáticamente como <strong>${s.nif}_justificante.pdf</strong> y se subirá a GitHub.</p>
       <div style="margin-bottom:16px">
         <a href="https://www.fega.gob.es" target="_blank" rel="noopener" class="btn btn-blue" style="text-decoration:none">🌐 Abrir Web FEGA</a>
       </div>
       <input type="file" id="justificanteInput" accept=".pdf" onchange="handleJustificante(this)" style="display:none">
-      <div class="file-drop ${attachedFile ? 'has-file' : ''}" onclick="document.getElementById('justificanteInput').click()" style="margin-bottom:16px">
-        ${attachedFile
-          ? `<div class="file-info">✓ Justificante: ${attachedFile.name}</div>`
-          : `<div style="color:var(--text-secondary)">📄 Adjuntar justificante PDF del FEGA</div>`}
+      <div class="file-drop \${attachedFile ? 'has-file' : ''}" onclick="document.getElementById('justificanteInput').click()" style="margin-bottom:16px">
+        \${attachedFile
+          ? \`<div class="file-info">✓ Justificante: \${attachedFile.renamedName || attachedFile.name}</div>\`
+          : \`<div style="color:var(--text-secondary)">📄 Adjuntar justificante PDF del FEGA</div>\`}
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap">
-        <button class="btn btn-blue" onclick="uploadJustificante()" ${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir justificante</button>
+        <button class="btn btn-blue" onclick="uploadJustificante()" \${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir justificante a GitHub</button>
         <button class="btn btn-gold" onclick="advanceStep()">Marcar como aceptada →</button>
       </div>
     `;
@@ -875,146 +876,171 @@ async function printAutorizacion() {
   const repNombre = rep.firmante || rep.nombre;
 
   try {
-    // Fetch template
+    // Cargar plantilla desde base64 embebido
     let templateBytes;
-    if (typeof TEMPLATE_B64 === "string" && TEMPLATE_B64 !== "TEMPLATE_PLACEHOLDER" && TEMPLATE_B64.length > 100) {
+    if (TEMPLATE_B64.length > 100) {
       const raw = atob(TEMPLATE_B64);
       templateBytes = new Uint8Array(raw.length);
       for (let i = 0; i < raw.length; i++) templateBytes[i] = raw.charCodeAt(i);
     } else {
-      // Fallback: try to fetch from same directory
       const resp = await fetch("Autorizacion.docx");
-      if (!resp.ok) throw new Error("No se pudo cargar la plantilla. Sube Autorizacion.docx al repositorio.");
-      const buf = await resp.arrayBuffer();
-      templateBytes = new Uint8Array(buf);
+      if (!resp.ok) throw new Error("No se pudo cargar la plantilla.");
+      templateBytes = new Uint8Array(await resp.arrayBuffer());
     }
 
     const zip = await JSZip.loadAsync(templateBytes);
     let xml = await zip.file("word/document.xml").async("string");
 
-    // === REPLACEMENTS IN DOCUMENT XML ===
-    // The template has underscored placeholders. We replace them with actual data.
-    // Using specific unique patterns to target the right fields.
+    // Parsear XML con DOMParser
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xml, "application/xml");
+    const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
-    // 1. BENEFICIARIO: "D./D.ª ______...______" -> nombre socio
-    xml = xml.replace(
-      /______________________________________________, mayor de edad, con DNI\/NIF /,
-      `${socioNombre}, mayor de edad, con DNI/NIF `
-    );
-
-    // 2. BENEFICIARIO NIF (first bold ________________ after DNI/NIF)
-    xml = replaceNth(xml, /<w:b\/>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t>________________<\/w:t>/, 
-      `<w:b/><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t>${s.nif}</w:t>`, 1);
-
-    // 3. BENEFICIARIO domicilio (long underscores after "domicilio en")
-    xml = xml.replace(
-      />____________________________________________________________<\/w:t>\s*<\/w:r>\s*<w:r>\s*<w:rPr>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t>, actuando:/,
-      `>${rep.direccion || "_______________"}</w:t></w:r><w:r><w:rPr><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t>, actuando:`
-    );
-
-    // 4. "En nombre y representación de" -> nombre socio (if acting on behalf)
-    // The second table row has: ☐ En nombre y representación de ______
-    xml = xml.replace(
-      />______________________________________________<\/w:t>\s*<\/w:r>\s*<w:r>\s*<w:rPr>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t xml:space="preserve">, con NIF\/CIF /,
-      `>${socioNombre}</w:t></w:r><w:r><w:rPr><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t xml:space="preserve">, con NIF/CIF `
-    );
-
-    // 5. NIF in "En nombre y representación" (second bold ________________)
-    xml = replaceNth(xml, /<w:b\/>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t>________________<\/w:t>/, 
-      `<w:b/><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t>${s.nif}</w:t>`, 1);
-
-    // 6. "en calidad de" ________________________________
-    xml = xml.replace(
-      />________________________________<\/w:t>\s*<\/w:r>\s*<w:r>\s*<w:rPr>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t>\.<\/w:t>/,
-      `>${rep.cargo || "representante legal"}</w:t></w:r><w:r><w:rPr><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t>.</w:t>`
-    );
-
-    // 7. PERSONA AUTORIZADA: "a favor de D./D.ª ______" -> nombre autorizado
-    xml = xml.replace(
-      />______________________________________________<\/w:t>\s*<\/w:r>\s*<w:r>\s*<w:rPr>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t xml:space="preserve">, con DNI\/NIF /,
-      `>${repNombre}</w:t></w:r><w:r><w:rPr><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t xml:space="preserve">, con DNI/NIF `
-    );
-
-    // 8. DNI/NIF autorizado (third bold ________________)
-    xml = replaceNth(xml, /<w:b\/>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t>________________<\/w:t>/, 
-      `<w:b/><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t>${rep.nifFirmante || rep.nif}</w:t>`, 1);
-
-    // 9. Cooperativa name: "_____________________________, con NIF/CIF"
-    xml = xml.replace(
-      />_____________________________, con NIF\/CIF <\/w:t>/,
-      `>${rep.nombre}, con NIF/CIF </w:t>`
-    );
-
-    // 10. Cooperativa NIF: "_____________________________,"
-    xml = xml.replace(
-      />_____________________________, <\/w:t>/,
-      `>${rep.nif}, </w:t>`
-    );
-
-    // 11. Cooperativa domicilio: long underscores before ", para que actúe"
-    xml = xml.replace(
-      />____________________________________________________________<\/w:t>\s*<\/w:r>\s*<w:r>\s*<w:rPr>\s*<w:lang[^\/]*\/>\s*<\/w:rPr>\s*<w:t>, para que actúe/,
-      `>${rep.direccion || "_______________"}</w:t></w:r><w:r><w:rPr><w:lang w:val="es-ES_tradnl"/></w:rPr><w:t>, para que actúe`
-    );
-
-    // 12. Lugar de firma: "_______________________________" before ", a"
-    xml = xml.replace(
-      />_______________________________<\/w:t>/,
-      `>${rep.direccion ? rep.direccion.split(",").pop().trim() : "_______________"}</w:t>`
-    );
-
-    // 13. Fecha de firma
+    // Fecha
     const hoy = new Date();
     const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    xml = xml.replace(
-      />____ de __________________ de 2026<\/w:t>/,
-      `>${hoy.getDate()} de ${meses[hoy.getMonth()]} de 2026</w:t>`
-    );
+    const lugar = rep.direccion ? rep.direccion.split(",").pop().trim() : "_______________";
 
-    // 14-18. Signature fields (left = beneficiario, right = autorizado)
-    // Left: Fdo, Nombre, DNI
-    xml = replaceNth(xml, />Fdo.: _________________________________</, `>Fdo.: ${socioNombre}<`, 1);
-    xml = replaceNth(xml, />Nombre y apellidos: ____________________________</, `>Nombre y apellidos: ${socioNombre}<`, 1);
-    xml = replaceNth(xml, />DNI\/NIF: ________________________</, `>DNI/NIF: ${s.nif}<`, 1);
-    // Right: Fdo, Nombre, DNI
-    xml = replaceNth(xml, />Fdo.: _________________________________</, `>Fdo.: ${repNombre}<`, 1);
-    xml = replaceNth(xml, />Nombre y apellidos: ____________________________</, `>Nombre y apellidos: ${repNombre}<`, 1);
-    xml = replaceNth(xml, />DNI\/NIF: ________________________</, `>DNI/NIF: ${rep.nifFirmante || rep.nif}<`, 1);
+    // ==========================================
+    // REEMPLAZOS en elementos <w:t> por texto exacto
+    // Contadores para campos que se repiten
+    // ==========================================
+    let underscore46 = 0;  // ______________________________________________ (46)
+    let underscore16 = 0;  // ________________ (16)
+    let underscore60 = 0;  // ____________...________ (60)
+    let underscore32 = 0;  // ________________________________ (32)
+    let fdoCount = 0, naCount = 0, dniSigCount = 0, checkboxCount = 0;
 
-    // Save modified XML back
-    zip.file("word/document.xml", xml);
+    const allT = xmlDoc.getElementsByTagNameNS(ns, "t");
+    for (let i = 0; i < allT.length; i++) {
+      const t = allT[i];
+      const txt = t.textContent;
 
-    // Generate new docx
-    const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      // === PARA 3: "____..._____, mayor de edad, con DNI/NIF " ===
+      if (txt.includes("______________________________________________, mayor de edad, con DNI/NIF ")) {
+        t.textContent = socioNombre + ", mayor de edad, con DNI/NIF ";
+        continue;
+      }
+
+      // === 46 guiones bajos (3 ocurrencias) ===
+      if (txt === "______________________________________________") {
+        underscore46++;
+        if (underscore46 === 1) t.textContent = socioNombre;       // Tabla: "en nombre y representación de"
+        else if (underscore46 === 2) t.textContent = repNombre;    // "a favor de D./D.ª"
+        continue;
+      }
+
+      // === 16 guiones bajos (3 ocurrencias) ===
+      if (txt === "________________") {
+        underscore16++;
+        if (underscore16 === 1) t.textContent = s.nif;                              // NIF beneficiario
+        else if (underscore16 === 2) t.textContent = s.nif;                         // NIF en tabla representación
+        else if (underscore16 === 3) t.textContent = rep.nifFirmante || rep.nif;    // DNI autorizado
+        continue;
+      }
+
+      // === 60 guiones bajos (2 ocurrencias) ===
+      if (txt === "____________________________________________________________") {
+        underscore60++;
+        t.textContent = rep.direccion || "_______________";  // Domicilio (beneficiario y coop)
+        continue;
+      }
+
+      // === 32 guiones bajos (1 ocurrencia): calidad/cargo ===
+      if (txt === "________________________________") {
+        t.textContent = rep.cargo || "representante legal";
+        continue;
+      }
+
+      // === Cooperativa: "_____________________________, con NIF/CIF " ===
+      if (txt === "_____________________________, con NIF/CIF ") {
+        t.textContent = rep.nombre + ", con NIF/CIF ";
+        continue;
+      }
+
+      // === NIF Cooperativa: "_____________________________, " ===
+      if (txt === "_____________________________, ") {
+        t.textContent = rep.nif + ", ";
+        continue;
+      }
+
+      // === 31 guiones bajos: lugar de firma ===
+      if (txt === "_______________________________") {
+        t.textContent = lugar;
+        continue;
+      }
+
+      // === Fecha: "____ de __________________ " ===
+      if (txt.includes("____ de __________________")) {
+        t.textContent = hoy.getDate() + " de " + meses[hoy.getMonth()] + " ";
+        continue;
+      }
+
+      // === CASILLAS: Marcar ☐ -> ☑ ===
+      // Casilla "En nombre propio" (es "☐ " en bold, primera ocurrencia)
+      if (txt === "\u2610 " || txt === "☐ ") {
+        checkboxCount++;
+        if (checkboxCount === 1) {
+          t.textContent = "☑ ";  // Marcar "En nombre propio"
+        }
+        continue;
+      }
+      // Casilla "Aceptar expresamente la ayuda."
+      if (txt.includes("\u2610 Aceptar") || txt.includes("☐ Aceptar")) {
+        t.textContent = "☑ Aceptar expresamente la ayuda.";
+        continue;
+      }
+
+      // === Firmas (tabla 2, runs con saltos de línea) ===
+      if (txt.includes("Fdo.: _________________________________")) {
+        fdoCount++;
+        t.textContent = txt.replace("Fdo.: _________________________________",
+          "Fdo.: " + (fdoCount === 1 ? socioNombre : repNombre));
+      }
+      if (txt.includes("Nombre y apellidos: ____________________________")) {
+        naCount++;
+        t.textContent = txt.replace("Nombre y apellidos: ____________________________",
+          "Nombre y apellidos: " + (naCount === 1 ? socioNombre : repNombre));
+      }
+      if (txt.includes("DNI/NIF: ________________________")) {
+        dniSigCount++;
+        t.textContent = txt.replace("DNI/NIF: ________________________",
+          "DNI/NIF: " + (dniSigCount === 1 ? s.nif : (rep.nifFirmante || rep.nif)));
+      }
+    }
+
+    // Serializar XML modificado
+    const serializer = new XMLSerializer();
+    const newXml = serializer.serializeToString(xmlDoc);
+    zip.file("word/document.xml", newXml);
+
+    // Generar y descargar docx
+    const blob = await zip.generateAsync({
+      type: "blob",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Autorizacion_${s.cod}_${s.nif}.docx`;
+    a.download = "Autorizacion_" + s.cod + "_" + s.nif + ".docx";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`✓ Autorización generada y descargada: Autorizacion_${s.cod}_${s.nif}.docx`);
   } catch(e) {
     console.error(e);
     alert("Error generando autorización: " + e.message);
   }
 }
 
-// Helper: replace the Nth occurrence of a regex
-function replaceNth(str, regex, replacement, n) {
-  let count = 0;
-  return str.replace(new RegExp(regex.source, regex.flags || ""), function(match) {
-    count++;
-    return count === n ? replacement : match;
-  });
-}
-
 function handleFileAttach(input) {
   const file = input.files[0];
   if (file) {
+    const ext = file.name.split(".").pop();
+    const renamedName = selectedSocio.nif + "_autorizacion." + ext;
     attachedFile = file;
+    attachedFile.renamedName = renamedName;
     renderDetail();
   }
 }
@@ -1022,7 +1048,11 @@ function handleFileAttach(input) {
 function handleJustificante(input) {
   const file = input.files[0];
   if (file) {
+    // Renombrar automáticamente con el NIF del socio
+    const ext = file.name.split(".").pop();
+    const renamedName = selectedSocio.nif + "_justificante." + ext;
     attachedFile = file;
+    attachedFile.renamedName = renamedName;
     renderDetail();
   }
 }
@@ -1033,7 +1063,7 @@ async function uploadAutorizacion() {
   reader.onload = async function() {
     const base64 = reader.result.split(",")[1];
     const ext = attachedFile.name.split(".").pop();
-    const path = `autorizaciones/${selectedSocio.cod}_${selectedSocio.nif}_autorizacion.${ext}`;
+    const path = `autorizaciones/${selectedSocio.nif}_autorizacion.${ext}`;
     const ok = await uploadToGithub(path, base64, `Autorización firmada socio ${selectedSocio.cod} - ${selectedSocio.nombre}`);
     if (ok) alert("✓ Autorización subida correctamente a GitHub");
   };
@@ -1045,10 +1075,12 @@ async function uploadJustificante() {
   const reader = new FileReader();
   reader.onload = async function() {
     const base64 = reader.result.split(",")[1];
-    const ext = attachedFile.name.split(".").pop();
-    const path = `justificantes/${selectedSocio.cod}_${selectedSocio.nif}_justificante.${ext}`;
-    const ok = await uploadToGithub(path, base64, `Justificante FEGA socio ${selectedSocio.cod} - ${selectedSocio.nombre}`);
-    if (ok) alert("✓ Justificante subido correctamente a GitHub");
+    const renamedName = attachedFile.renamedName || (selectedSocio.nif + "_justificante.pdf");
+    const path = `justificantes/${renamedName}`;
+    const ok = await uploadToGithub(path, base64, `Justificante FEGA socio ${selectedSocio.cod} - ${selectedSocio.nombre} (${selectedSocio.nif})`);
+    if (ok) {
+      alert("✓ Justificante subido a GitHub como: " + renamedName);
+    }
   };
   reader.readAsDataURL(attachedFile);
 }
