@@ -334,8 +334,8 @@ body::before {
 <div class="config-panel" id="configPanel">
   <h3>Datos del Representante</h3>
   <div class="config-grid">
-    <div class="config-field"><label>Nombre / Razón Social</label><input id="cfgNombre" value="COOPERATIVA OLIVARERA Y FRUTERA SAN ISIDRO LABRADOR"></div>
-    <div class="config-field"><label>NIF / CIF</label><input id="cfgNif" value="F23004090"></div>
+    <div class="config-field"><label>Nombre / Razón Social</label><input id="cfgNombre" value="ACEITES GUADALQUIVIR SCA"></div>
+    <div class="config-field"><label>NIF / CIF</label><input id="cfgNif" value="F23661200"></div>
     <div class="config-field"><label>Dirección</label><input id="cfgDireccion" value="Ctra. Circunvalación, s/n, 23620 Mengíbar, Jaén"></div>
     <div class="config-field"><label>Cargo</label><input id="cfgCargo" value="Representante legal"></div>
     <div class="config-field"><label>Nombre del firmante</label><input id="cfgFirmante" value=""></div>
@@ -412,8 +412,8 @@ let config = {
   githubRepo: "",
   githubToken: "",
   representante: {
-    nombre: "COOPERATIVA OLIVARERA Y FRUTERA SAN ISIDRO LABRADOR",
-    nif: "F23004090",
+    nombre: "ACEITES GUADALQUIVIR SCA",
+    nif: "F23661200",
     direccion: "Ctra. Circunvalación, s/n, 23620 Mengíbar, Jaén",
     cargo: "Representante legal",
     firmante: "",
@@ -455,7 +455,14 @@ function loadConfig() {
   try {
     const saved = localStorage.getItem("fega-config");
     if (saved) {
-      config = { ...config, ...JSON.parse(saved) };
+      const parsed = JSON.parse(saved);
+      config = { ...config, ...parsed };
+      // Migrar datos antiguos de cooperativa si existen
+      if (config.representante.nombre === "COOPERATIVA OLIVARERA Y FRUTERA SAN ISIDRO LABRADOR") {
+        config.representante.nombre = "ACEITES GUADALQUIVIR SCA";
+        config.representante.nif = "F23661200";
+        localStorage.setItem("fega-config", JSON.stringify(config));
+      }
       document.getElementById("cfgNombre").value = config.representante.nombre;
       document.getElementById("cfgNif").value = config.representante.nif;
       document.getElementById("cfgDireccion").value = config.representante.direccion;
