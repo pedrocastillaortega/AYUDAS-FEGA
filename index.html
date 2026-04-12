@@ -902,118 +902,50 @@ async function printAutorizacion() {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xml, "application/xml");
     const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    const allT = xmlDoc.getElementsByTagNameNS(ns, "t");
 
     // Fecha
     const hoy = new Date();
     const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
     const lugar = rep.direccion ? rep.direccion.split(",").pop().trim() : "_______________";
 
-    // ==========================================
-    // REEMPLAZOS en elementos <w:t> por texto exacto
-    // Contadores para campos que se repiten
-    // ==========================================
-    let underscore46 = 0;  // ______________________________________________ (46)
-    let underscore16 = 0;  // ________________ (16)
-    let underscore60 = 0;  // ____________...________ (60)
-    let underscore32 = 0;  // ________________________________ (32)
-    let underscore29_count = 0; // _____________________________ (29)
-    let fdoCount = 0, dniSigCount = 0, checkboxCount = 0;
+    // =====================================================
+    // REEMPLAZOS POR ÍNDICE DIRECTO (verificados contra XML)
+    // =====================================================
+    const R = {}; // mapa índice -> nuevo valor
+    R[6]  = socioNombre + ", mayor de edad, con DNI/NIF ";
+    R[7]  = s.nif;
+    R[9]  = rep.direccion || "_______________";
+    R[11] = "\u2611 ";                                    // ☑ En nombre propio
+    R[15] = socioNombre;                                   // En representación de: nombre
+    R[17] = s.nif;                                         // En representación de: NIF
+    R[19] = rep.cargo || "representante legal";            // Calidad
+    R[23] = repNombre;                                     // Persona autorizada: nombre
+    R[25] = rep.nifFirmante || rep.nif;                    // Persona autorizada: DNI
+    R[28] = rep.nombre;                                    // S.Coop.And -> nombre entidad
+    R[30] = rep.nombre;                                    // _____ -> nombre entidad
+    R[33] = rep.nif;                                       // _____ -> NIF entidad
+    R[36] = rep.direccion || "_______________";            // Domicilio entidad
+    R[49] = "\u2611 Aceptar expresamente la ayuda.";      // ☑ Aceptar
+    R[80] = lugar;                                         // Lugar de firma
+    R[82] = hoy.getDate() + " de " + meses[hoy.getMonth()] + " "; // Fecha
+    R[88] = "Fdo.: " + socioNombre;                        // Firma izq
+    R[89] = "";                                            // Eliminar "Nombre y apellidos"
+    R[90] = "DNI/NIF: " + s.nif;                           // DNI izq
+    R[91] = "Fdo.: " + repNombre;                          // Firma der
+    R[92] = "";                                            // Eliminar "Nombre y apellidos"
+    R[93] = "DNI/NIF: " + (rep.nifFirmante || rep.nif);    // DNI der
 
-    const allT = xmlDoc.getElementsByTagNameNS(ns, "t");
-    for (let i = 0; i < allT.length; i++) {
-      const t = allT[i];
-      const txt = t.textContent;
-
-      // === PARA 3: "____..._____, mayor de edad, con DNI/NIF " ===
-      if (txt.includes("______________________________________________, mayor de edad, con DNI/NIF ")) {
-        t.textContent = socioNombre + ", mayor de edad, con DNI/NIF ";
-        continue;
-      }
-
-      // === 46 guiones bajos (3 ocurrencias) ===
-      if (txt === "______________________________________________") {
-        underscore46++;
-        if (underscore46 === 1) t.textContent = socioNombre;       // Tabla: "en nombre y representación de"
-        else if (underscore46 === 2) t.textContent = repNombre;    // "a favor de D./D.ª"
-        continue;
-      }
-
-      // === 16 guiones bajos (3 ocurrencias) ===
-      if (txt === "________________") {
-        underscore16++;
-        if (underscore16 === 1) t.textContent = s.nif;                              // NIF beneficiario
-        else if (underscore16 === 2) t.textContent = s.nif;                         // NIF en tabla representación
-        else if (underscore16 === 3) t.textContent = rep.nifFirmante || rep.nif;    // DNI autorizado
-        continue;
-      }
-
-      // === 60 guiones bajos (2 ocurrencias) ===
-      if (txt === "____________________________________________________________") {
-        underscore60++;
-        t.textContent = rep.direccion || "_______________";  // Domicilio (beneficiario y coop)
-        continue;
-      }
-
-      // === 32 guiones bajos (1 ocurrencia): calidad/cargo ===
-      if (txt === "________________________________") {
-        t.textContent = rep.cargo || "representante legal";
-        continue;
-      }
-
-      // === 29 guiones bajos (2 ocurrencias): nombre entidad y NIF entidad ===
-      if (txt === "_____________________________") {
-        underscore29_count++;
-        if (underscore29_count === 1) t.textContent = rep.nombre;   // nombre entidad
-        else if (underscore29_count === 2) t.textContent = rep.nif; // NIF entidad
-        continue;
-      }
-
-      // === 31 guiones bajos: lugar de firma ===
-      if (txt === "_______________________________") {
-        t.textContent = lugar;
-        continue;
-      }
-
-      // === Fecha: "____ de __________________ " (dia y mes, "de" y "2026" están aparte) ===
-      if (txt.includes("____ de __________________")) {
-        t.textContent = hoy.getDate() + " de " + meses[hoy.getMonth()] + " ";
-        continue;
-      }
-
-      // === "S.Coop.And" -> reemplazar con nombre entidad ===
-      if (txt === "S.Coop.And") {
-        t.textContent = rep.nombre;
-        continue;
-      }
-
-      // === CASILLAS: Marcar ☐ -> ☑ ===
-      // Casilla "En nombre propio" (es "☐ " en bold, primera ocurrencia)
-      if (txt === "\u2610 " || txt === "☐ ") {
-        checkboxCount++;
-        if (checkboxCount === 1) {
-          t.textContent = "☑ ";  // Marcar "En nombre propio"
-        }
-        continue;
-      }
-      // Casilla "Aceptar expresamente la ayuda."
-      if (txt.includes("\u2610 Aceptar") || txt.includes("☐ Aceptar")) {
-        t.textContent = "☑ Aceptar expresamente la ayuda.";
-        continue;
-      }
-
-      // === Firmas (tabla 2, cada campo es un <w:t> separado) ===
-      if (txt.includes("Fdo.: _________________________________")) {
-        fdoCount++;
-        t.textContent = "Fdo.: " + (fdoCount === 1 ? socioNombre : repNombre);
-      }
-      if (txt.includes("Nombre y apellidos: ____________________________")) {
-        t.textContent = "";  // Eliminar línea redundante
-      }
-      if (txt.includes("DNI/NIF: ________________________")) {
-        dniSigCount++;
-        t.textContent = "DNI/NIF: " + (dniSigCount === 1 ? s.nif : (rep.nifFirmante || rep.nif));
+    // Aplicar reemplazos
+    let applied = 0;
+    for (const [idx, value] of Object.entries(R)) {
+      const i = parseInt(idx);
+      if (i < allT.length) {
+        allT[i].textContent = value;
+        applied++;
       }
     }
+    console.log("FEGA: Applied " + applied + "/" + Object.keys(R).length + " replacements on " + allT.length + " elements");
 
     // Serializar XML modificado
     const serializer = new XMLSerializer();
