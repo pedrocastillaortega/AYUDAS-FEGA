@@ -977,15 +977,15 @@ async function printAutorizacion() {
         continue;
       }
 
-      // === Fecha: "____ de __________________ " ===
+      // === Fecha: "____ de __________________ de 2026" ===
       if (txt.includes("____ de __________________")) {
-        t.textContent = hoy.getDate() + " de " + meses[hoy.getMonth()] + " ";
+        t.textContent = hoy.getDate() + " de " + meses[hoy.getMonth()] + " de 2026";
         continue;
       }
 
-      // === "S.Coop.And" -> vaciar (el nombre de entidad va en el siguiente run) ===
-      if (txt === "S.Coop.And") {
-        t.textContent = "";
+      // === "como técnico de S.Coop.And" -> reemplazar con nombre entidad ===
+      if (txt.includes("S.Coop.And")) {
+        t.textContent = txt.replace("S.Coop.And", rep.nombre);
         continue;
       }
 
@@ -1004,19 +1004,17 @@ async function printAutorizacion() {
         continue;
       }
 
-      // === Firmas (tabla 2, runs con saltos de línea) ===
+      // === Firmas (tabla 2, cada campo es un <w:t> separado) ===
       if (txt.includes("Fdo.: _________________________________")) {
         fdoCount++;
-        t.textContent = txt.replace("Fdo.: _________________________________",
-          "Fdo.: " + (fdoCount === 1 ? socioNombre : repNombre));
+        t.textContent = "Fdo.: " + (fdoCount === 1 ? socioNombre : repNombre);
       }
       if (txt.includes("Nombre y apellidos: ____________________________")) {
-        t.textContent = txt.replace("\nNombre y apellidos: ____________________________", "");
+        t.textContent = "";  // Eliminar línea redundante
       }
       if (txt.includes("DNI/NIF: ________________________")) {
         dniSigCount++;
-        t.textContent = txt.replace("DNI/NIF: ________________________",
-          "DNI/NIF: " + (dniSigCount === 1 ? s.nif : (rep.nifFirmante || rep.nif)));
+        t.textContent = "DNI/NIF: " + (dniSigCount === 1 ? s.nif : (rep.nifFirmante || rep.nif));
       }
     }
 
