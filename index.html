@@ -105,42 +105,9 @@ body::before {
 /* ---- MAIN CONTAINER ---- */
 .container { max-width: 1200px; margin: 0 auto; padding: 20px 16px; position: relative; z-index: 1; }
 
-/* ---- CONFIG PANEL ---- */
-.config-panel {
-  background: var(--bg-card); border-bottom: 1px solid var(--border);
-  padding: 20px 24px; display: none;
-}
-.config-panel.open { display: block; }
-.config-panel h3 { color: var(--gold); font-size: 14px; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
-.config-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;
-}
-.config-field label {
-  display: block; font-size: 10px; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;
-}
-.config-field input {
-  width: 100%; padding: 8px 12px; border-radius: 6px;
-  border: 1px solid var(--border); background: var(--bg-input);
-  color: var(--text-primary); font-size: 13px; font-family: var(--font-body);
-}
-.config-field input:focus { outline: none; border-color: var(--gold-dark); }
 
-/* ---- URL CONFIG ---- */
-.url-config {
-  background: linear-gradient(135deg, rgba(224,168,48,0.08), rgba(59,130,246,0.05));
-  border: 1px dashed var(--gold-dark); border-radius: var(--radius-lg);
-  padding: 24px; margin-bottom: 20px; text-align: center;
-}
-.url-config h3 { color: var(--gold); margin-bottom: 8px; }
-.url-config p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
-.url-config input {
-  width: 100%; max-width: 600px; padding: 10px 16px;
-  border-radius: 8px; border: 1px solid var(--gold-dark);
-  background: var(--bg-input); color: var(--text-primary);
-  font-size: 14px; font-family: var(--font-mono); text-align: center;
-}
-.url-config input:focus { outline: none; border-color: var(--gold); }
+
+
 
 /* ---- STATS ---- */
 .stats-grid {
@@ -325,52 +292,15 @@ body::before {
     </div>
   </div>
   <div class="header-actions">
-    <button class="btn" onclick="toggleConfig()" id="btnConfig">⚙ Configuración</button>
+    
     <button class="btn" onclick="goToList()" id="btnVolver" style="display:none; border-color: var(--gold); color: var(--gold);">← Volver</button>
   </div>
 </div>
 
-<!-- CONFIG PANEL -->
-<div class="config-panel" id="configPanel">
-  <h3>Datos del Representante</h3>
-  <div class="config-grid">
-    <div class="config-field"><label>Nombre / Razón Social</label><input id="cfgNombre" value="ACEITES GUADALQUIVIR SCA"></div>
-    <div class="config-field"><label>NIF / CIF</label><input id="cfgNif" value="F23661200"></div>
-    <div class="config-field"><label>Dirección</label><input id="cfgDireccion" value="CARRETERA DE ESPELUY, S/N, VILLANUEVA DE LA REINA (JAEN)"></div>
-    <div class="config-field"><label>Cargo</label><input id="cfgCargo" value="Representante legal"></div>
-    <div class="config-field"><label>Nombre del firmante</label><input id="cfgFirmante" value=""></div>
-    <div class="config-field"><label>NIF del firmante</label><input id="cfgNifFirmante" value=""></div>
-  </div>
-  <h3 style="margin-top:20px;">Conexión</h3>
-  <div class="config-grid">
-    <div class="config-field" style="grid-column: span 2;">
-      <label>URL del Google Apps Script (Web App)</label>
-      <input id="cfgApiUrl" placeholder="https://script.google.com/macros/s/XXXXXXXXX/exec" value="">
-    </div>
-    <div class="config-field" style="grid-column: span 2;">
-      <label>Repositorio GitHub (para archivos)</label>
-      <input id="cfgGithubRepo" placeholder="usuario/nombre-repo" value="">
-    </div>
-    <div class="config-field" style="grid-column: span 2;">
-      <label>Token GitHub (Personal Access Token)</label>
-      <input id="cfgGithubToken" type="password" placeholder="ghp_XXXXXXXXXXXX" value="">
-    </div>
-  </div>
-  <div style="margin-top:14px; display:flex; gap:8px;">
-    <button class="btn btn-gold" onclick="saveConfig()">Guardar configuración</button>
-    <button class="btn btn-blue" onclick="testConnection()">Probar conexión</button>
-  </div>
-  <div id="configMsg" style="margin-top:10px; font-size:13px;"></div>
-</div>
 
 <!-- MAIN -->
 <div class="container">
-  <!-- API URL prompt (if not configured) -->
-  <div id="urlPrompt" class="url-config" style="display:none;">
-    <h3>🔗 Configurar conexión</h3>
-    <p>Introduce la URL de tu Google Apps Script desplegado como Web App</p>
-    <input id="quickApiUrl" placeholder="https://script.google.com/macros/s/.../exec" onkeydown="if(event.key==='Enter')quickSetUrl()">
-    <div style="margin-top:12px;"><button class="btn btn-gold" onclick="quickSetUrl()">Conectar</button></div>
+  
   </div>
 
   <!-- STATS -->
@@ -442,94 +372,22 @@ const STEPS = [
 
 // ============ INIT ============
 window.addEventListener("DOMContentLoaded", () => {
-  loadConfig();
-  if (config.apiUrl) {
-    fetchSocios();
-  } else {
-    document.getElementById("urlPrompt").style.display = "block";
-  }
+  fetchSocios();
 });
 
 // ============ CONFIG ============
 function loadConfig() {
-  try {
-    const saved = localStorage.getItem("fega-config");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Preservar apiUrl, githubRepo, githubToken
-      if (parsed.apiUrl) config.apiUrl = parsed.apiUrl;
-      if (parsed.githubRepo) config.githubRepo = parsed.githubRepo;
-      if (parsed.githubToken) config.githubToken = parsed.githubToken;
-      // Merge representante sin perder los nuevos defaults
-      if (parsed.representante) {
-        config.representante = { ...config.representante, ...parsed.representante };
-      }
-      document.getElementById("cfgNombre").value = config.representante.nombre;
-      document.getElementById("cfgNif").value = config.representante.nif;
-      document.getElementById("cfgDireccion").value = config.representante.direccion;
-      document.getElementById("cfgCargo").value = config.representante.cargo;
-      document.getElementById("cfgFirmante").value = config.representante.firmante || "";
-      document.getElementById("cfgNifFirmante").value = config.representante.nifFirmante || "";
-      document.getElementById("cfgApiUrl").value = config.apiUrl;
-      document.getElementById("cfgGithubRepo").value = config.githubRepo || "";
-      document.getElementById("cfgGithubToken").value = config.githubToken || "";
-    }
-  } catch(e) {}
+  // Config is fixed in code, no localStorage needed
 }
 
-function saveConfig() {
-  config.representante = {
-    nombre: document.getElementById("cfgNombre").value,
-    nif: document.getElementById("cfgNif").value,
-    direccion: document.getElementById("cfgDireccion").value,
-    cargo: document.getElementById("cfgCargo").value,
-    firmante: document.getElementById("cfgFirmante").value,
-    nifFirmante: document.getElementById("cfgNifFirmante").value
-  };
-  config.apiUrl = document.getElementById("cfgApiUrl").value.trim();
-  config.githubRepo = document.getElementById("cfgGithubRepo").value.trim();
-  config.githubToken = document.getElementById("cfgGithubToken").value.trim();
-  localStorage.setItem("fega-config", JSON.stringify(config));
-  showConfigMsg("✓ Configuración guardada", "var(--green)");
-}
 
-function toggleConfig() {
-  document.getElementById("configPanel").classList.toggle("open");
-}
 
-function showConfigMsg(text, color) {
-  const el = document.getElementById("configMsg");
-  el.textContent = text;
-  el.style.color = color || "var(--text-secondary)";
-  setTimeout(() => el.textContent = "", 4000);
-}
 
-function quickSetUrl() {
-  const url = document.getElementById("quickApiUrl").value.trim();
-  if (!url) return;
-  config.apiUrl = url;
-  document.getElementById("cfgApiUrl").value = url;
-  saveConfig();
-  document.getElementById("urlPrompt").style.display = "none";
-  fetchSocios();
-}
 
-async function testConnection() {
-  const url = document.getElementById("cfgApiUrl").value.trim();
-  if (!url) { showConfigMsg("⚠ Introduce la URL primero", "var(--red)"); return; }
-  showConfigMsg("⏳ Probando conexión...", "var(--gold)");
-  try {
-    const res = await fetch(url + "?action=getStats");
-    const data = await res.json();
-    if (data.success) {
-      showConfigMsg(`✓ Conexión OK — ${data.total} socios encontrados`, "var(--green)");
-    } else {
-      showConfigMsg("✗ Respuesta inesperada: " + JSON.stringify(data), "var(--red)");
-    }
-  } catch(e) {
-    showConfigMsg("✗ Error de conexión: " + e.message, "var(--red)");
-  }
-}
+
+
+
+
 
 // ============ DATA FETCHING ============
 async function fetchSocios() {
@@ -552,7 +410,6 @@ async function fetchSocios() {
     }
   } catch(e) {
     alert("Error de conexión: " + e.message + "\n\nVerifica la URL del Apps Script en Configuración.");
-    document.getElementById("urlPrompt").style.display = "block";
     showView("none");
   }
 }
