@@ -431,6 +431,27 @@ function formatCurrency(n) {
   return n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
+function sanitizeNifForFilename(nif) {
+  const cleaned = String(nif || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, "");
+  return cleaned || "SIN_NIF";
+}
+
+function getFileExtension(fileName, fallback = "pdf") {
+  const name = String(fileName || "");
+  const parts = name.split(".");
+  if (parts.length < 2) return fallback;
+  const ext = parts.pop().trim().toLowerCase();
+  return ext || fallback;
+}
+
+function buildGithubContentsUrl(filePath) {
+  const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+  return `https://api.github.com/repos/${config.githubRepo}/contents/${encodedPath}`;
+}
+
 // ============ API CALLS ============
 async function updateSocioStatus(cod, status, paso) {
   try {
@@ -454,20 +475,43 @@ async function uploadToGithub(filePath, fileContent, commitMessage) {
     return false;
   }
   try {
-    const res = await fetch(`https://api.github.com/repos/${config.githubRepo}/contents/${filePath}`, {
+    const githubUrl = buildGithubContentsUrl(filePath);
+    let existingSha = null;
+
+    const currentFileRes = await fetch(githubUrl, {
+      method: "GET",
+      headers: { "Authorization": "token " + config.githubToken }
+    });
+
+    if (currentFileRes.ok) {
+      const currentFile = await currentFileRes.json();
+      existingSha = currentFile.sha;
+    } else if (currentFileRes.status !== 404) {
+      let getErr = {};
+      try { getErr = await currentFileRes.json(); } catch(_) {}
+      alert("Error verificando archivo en GitHub: " + (getErr.message || ("HTTP " + currentFileRes.status)));
+      return false;
+    }
+
+    const payload = {
+      message: commitMessage,
+      content: fileContent // base64
+    };
+    if (existingSha) payload.sha = existingSha;
+
+    const res = await fetch(githubUrl, {
       method: "PUT",
       headers: {
         "Authorization": "token " + config.githubToken,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        message: commitMessage,
-        content: fileContent // base64
-      })
+      body: JSON.stringify(payload)
     });
     if (res.ok) return true;
-    const err = await res.json();
-    alert("Error subiendo a GitHub: " + (err.message || "desconocido"));
+
+    let err = {};
+    try { err = await res.json(); } catch(_) {}
+    alert("Error subiendo a GitHub: " + (err.message || ("HTTP " + res.status)));
     return false;
   } catch(e) {
     alert("Error de conexión con GitHub: " + e.message);
@@ -614,19 +658,19 @@ function renderDetail() {
   else if (currentStep === 2) {
     const fileHTML = attachedFile
       ? `<div class="file-drop has-file" onclick="document.getElementById('fileInput').click()">
-           <div class="file-info">✓ ${attachedFile.name} (${(attachedFile.size/1024).toFixed(1)} KB)</div>
+           <div class="file-info">✓ ${attachedFile.renamedName || attachedFile.name} (${(attachedFile.size/1024).toFixed(1)} KB)</div>
            <div style="color:var(--text-muted); font-size:11px; margin-top:4px">Click para cambiar</div>
          </div>`
       : `<div class="file-drop" onclick="document.getElementById('fileInput').click()">
            <div style="font-size:32px; margin-bottom:8px">📎</div>
-           <div style="color:var(--text-secondary)">Click para seleccionar el archivo escaneado</div>
-           <div style="color:var(--text-muted); font-size:11px; margin-top:4px">PDF, JPG o PNG</div>
+           <div style="color:var(--text-secondary)">Click para seleccionar el PDF firmado</div>
+           <div style="color:var(--text-muted); font-size:11px; margin-top:4px">Se guardará como DNI.pdf</div>
          </div>`;
 
     stepContent = `
       <h3>Paso 3: Adjuntar Autorización Firmada</h3>
-      <p>Escanee la autorización firmada por el socio y adjúntela aquí. Se subirá al repositorio de GitHub.</p>
-      <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileAttach(this)" style="display:none">
+      <p>Adjunte la autorización firmada en PDF. Se renombrará automáticamente con el DNI del socio y se subirá a GitHub.</p>
+      <input type="file" id="fileInput" accept=".pdf" onchange="handleFileAttach(this)" style="display:none">
       ${fileHTML}
       <div style="display:flex; gap:10px; flex-wrap:wrap">
         <button class="btn btn-blue" onclick="uploadAutorizacion()" ${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir a GitHub</button>
@@ -878,8 +922,14 @@ async function printAutorizacion() {
 function handleFileAttach(input) {
   const file = input.files[0];
   if (file) {
-    const ext = file.name.split(".").pop();
-    const renamedName = selectedSocio.nif + "_autorizacion." + ext;
+    const ext = getFileExtension(file.name, "");
+    if (ext !== "pdf") {
+      alert("La autorización debe adjuntarse en formato PDF.");
+      input.value = "";
+      return;
+    }
+    const safeNif = sanitizeNifForFilename(selectedSocio && selectedSocio.nif);
+    const renamedName = safeNif + ".pdf";
     attachedFile = file;
     attachedFile.renamedName = renamedName;
     renderDetail();
@@ -890,8 +940,9 @@ function handleJustificante(input) {
   const file = input.files[0];
   if (file) {
     // Renombrar automáticamente con el NIF del socio
-    const ext = file.name.split(".").pop();
-    const renamedName = selectedSocio.nif + "_justificante." + ext;
+    const ext = getFileExtension(file.name, "pdf");
+    const safeNif = sanitizeNifForFilename(selectedSocio && selectedSocio.nif);
+    const renamedName = safeNif + "_justificante." + ext;
     attachedFile = file;
     attachedFile.renamedName = renamedName;
     renderDetail();
@@ -903,10 +954,10 @@ async function uploadAutorizacion() {
   const reader = new FileReader();
   reader.onload = async function() {
     const base64 = reader.result.split(",")[1];
-    const ext = attachedFile.name.split(".").pop();
-    const path = `autorizaciones/${selectedSocio.nif}_autorizacion.${ext}`;
+    const renamedName = attachedFile.renamedName || (sanitizeNifForFilename(selectedSocio.nif) + ".pdf");
+    const path = `autorizaciones/${renamedName}`;
     const ok = await uploadToGithub(path, base64, `Autorización firmada socio ${selectedSocio.cod} - ${selectedSocio.nombre}`);
-    if (ok) alert("✓ Autorización subida correctamente a GitHub");
+    if (ok) alert("✓ Autorización subida correctamente a GitHub como: " + renamedName);
   };
   reader.readAsDataURL(attachedFile);
 }
