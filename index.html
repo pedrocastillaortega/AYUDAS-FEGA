@@ -340,7 +340,7 @@ let attachedFile = null;
 let config = {
   apiUrl: "https://script.google.com/macros/s/AKfycbzCzPyAZpLc12YZq9Yqdiz-7SZ231XPdyhLnCOSC4hajKRUCOxxULaIlz_wSlZt5GB1/exec",
   githubRepo: "pedrocastillaortega/AYUDAS-FEGA",
-  githubToken: "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",
+  githubToken: null,
   representante: {
     nombre: "ACEITES GUADALQUIVIR SCA",
     nif: "F23661200",
@@ -351,7 +351,20 @@ let config = {
   }
 };
 
-const STATUS_MAP = {
+function askGithubToken() {
+  let token = sessionStorage.getItem("githubToken");
+
+  while (!token) {
+    token = prompt("Introduce tu token de GitHub (obligatorio):");
+
+    if (!token) {
+      alert("El token es obligatorio para usar la app");
+    }
+  }
+
+  sessionStorage.setItem("githubToken", token);
+  config.githubToken = token;
+}const STATUS_MAP = {
   pendiente: { label: "Pendiente", badge: "badge-pendiente" },
   autorizacion: { label: "Autorización generada", badge: "badge-autorizacion" },
   firmada: { label: "Firmada adjuntada", badge: "badge-firmada" },
@@ -372,6 +385,7 @@ const STEPS = [
 
 // ============ INIT ============
 window.addEventListener("DOMContentLoaded", () => {
+  askGithubToken();
   fetchSocios();
 });
 
