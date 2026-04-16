@@ -454,8 +454,38 @@ async function uploadToGithub(filePath, fileContent, commitMessage) {
     return false;
   }
   const apiUrl = `https://api.github.com/repos/${config.githubRepo}/contents/${filePath}`;
+  
+  // Diagnóstico previo: probar que el token y repo funcionan
   try {
-    // Primero comprobar si el archivo ya existe para obtener su SHA
+    const testRes = await fetch(`https://api.github.com/repos/${config.githubRepo}`, {
+      method: "GET",
+      headers: {
+        "Authorization": "token " + config.githubToken,
+        "Accept": "application/vnd.github+json"
+      }
+    });
+    if (!testRes.ok) {
+      const errData = await testRes.json();
+      alert("⚠ Error de acceso a GitHub (código " + testRes.status + "):\n\n" + 
+            (errData.message || "Error desconocido") + 
+            "\n\nPosibles causas:\n" +
+            "- Token expirado o revocado\n" +
+            "- Token sin permisos 'repo'\n" +
+            "- Nombre del repositorio incorrecto");
+      return false;
+    }
+  } catch(testErr) {
+    alert("⚠ No se puede conectar con GitHub\n\n" +
+          "Causa: " + testErr.message + "\n\n" +
+          "Comprueba:\n" +
+          "- Conexión a internet\n" +
+          "- Que api.github.com no está bloqueada (firewall, proxy)\n" +
+          "- Desactiva extensiones del navegador (adblockers, etc.)");
+    return false;
+  }
+
+  try {
+    // Comprobar si el archivo ya existe para obtener su SHA
     let existingSha = null;
     try {
       const checkRes = await fetch(apiUrl, {
@@ -488,12 +518,10 @@ async function uploadToGithub(filePath, fileContent, commitMessage) {
     });
     if (res.ok) return true;
     const err = await res.json();
-    console.error("GitHub error:", err);
-    alert("Error subiendo a GitHub (" + res.status + "): " + (err.message || "desconocido") + "\n\nRevisa la consola (F12) para más detalles.");
+    alert("Error subiendo a GitHub (" + res.status + "):\n\n" + (err.message || "desconocido"));
     return false;
   } catch(e) {
-    console.error("Network error:", e);
-    alert("Error de conexión con GitHub: " + e.message);
+    alert("Error subiendo archivo: " + e.message);
     return false;
   }
 }
