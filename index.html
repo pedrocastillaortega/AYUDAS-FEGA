@@ -292,7 +292,7 @@ body::before {
     </div>
   </div>
   <div class="header-actions">
-    <button class="btn" onclick="configureGithubAccess()">🔐 GitHub</button>
+    
     <button class="btn" onclick="goToList()" id="btnVolver" style="display:none; border-color: var(--gold); color: var(--gold);">← Volver</button>
   </div>
 </div>
@@ -340,7 +340,7 @@ let attachedFile = null;
 let config = {
   apiUrl: "https://script.google.com/macros/s/AKfycbzCzPyAZpLc12YZq9Yqdiz-7SZ231XPdyhLnCOSC4hajKRUCOxxULaIlz_wSlZt5GB1/exec",
   githubRepo: "pedrocastillaortega/AYUDAS-FEGA",
-  githubToken: "",
+  githubToken: "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",
   representante: {
     nombre: "ACEITES GUADALQUIVIR SCA",
     nif: "F23661200",
@@ -350,7 +350,6 @@ let config = {
     nifFirmante: "52545400Z"
   }
 };
-const CONFIG_STORAGE_KEY = "fegaConfigV1";
 
 const STATUS_MAP = {
   pendiente: { label: "Pendiente", badge: "badge-pendiente" },
@@ -373,81 +372,12 @@ const STEPS = [
 
 // ============ INIT ============
 window.addEventListener("DOMContentLoaded", () => {
-  loadConfig();
   fetchSocios();
 });
 
 // ============ CONFIG ============
 function loadConfig() {
-  try {
-    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
-    if (!raw) return;
-    const saved = JSON.parse(raw);
-    if (saved && typeof saved === "object") {
-      if (saved.githubRepo) config.githubRepo = String(saved.githubRepo).trim();
-      if (saved.githubToken) config.githubToken = String(saved.githubToken).trim();
-    }
-  } catch(e) {
-    console.warn("No se pudo cargar la configuración local:", e);
-  }
-}
-
-function saveConfig() {
-  try {
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify({
-      githubRepo: config.githubRepo || "",
-      githubToken: config.githubToken || ""
-    }));
-  } catch(e) {
-    console.warn("No se pudo guardar la configuración local:", e);
-  }
-}
-
-function configureGithubAccess(options = {}) {
-  const forceToken = !!options.forceToken;
-  const repoInput = prompt("Repositorio de GitHub (formato owner/repo):", config.githubRepo || "");
-  if (repoInput === null) return false;
-
-  const cleanRepo = repoInput.trim();
-  if (!cleanRepo) {
-    alert("El repositorio es obligatorio.");
-    return false;
-  }
-  config.githubRepo = cleanRepo;
-
-  const tokenPrompt = forceToken || !config.githubToken
-    ? "Introduce un token personal de GitHub con permisos de 'Contents: Read and write':"
-    : "Pega un nuevo token de GitHub (o deja en blanco para mantener el actual):";
-  const tokenInput = prompt(tokenPrompt, "");
-  if (tokenInput === null) return false;
-
-  const cleanToken = tokenInput.trim();
-  if (cleanToken) {
-    config.githubToken = cleanToken;
-  } else if (forceToken || !config.githubToken) {
-    alert("El token de GitHub es obligatorio para subir archivos.");
-    return false;
-  }
-
-  saveConfig();
-  alert("Configuración de GitHub guardada correctamente.");
-  return true;
-}
-
-function getGithubAuthHeaders() {
-  return { "Authorization": "Bearer " + config.githubToken };
-}
-
-function isGithubAuthError(status, message) {
-  const msg = String(message || "").toLowerCase();
-  return status === 401 ||
-    msg.includes("bad credentials") ||
-    msg.includes("requires authentication") ||
-    msg.includes("resource not accessible by personal access token");
-}
-
-async function parseGithubError(response) {
-  try { return await response.json(); } catch(_) { return {}; }
+  // Config is fixed in code, no localStorage needed
 }
 
 
@@ -501,27 +431,6 @@ function formatCurrency(n) {
   return n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
-function sanitizeNifForFilename(nif) {
-  const cleaned = String(nif || "")
-    .trim()
-    .toUpperCase()
-    .replace(/[^0-9A-Z]/g, "");
-  return cleaned || "SIN_NIF";
-}
-
-function getFileExtension(fileName, fallback = "pdf") {
-  const name = String(fileName || "");
-  const parts = name.split(".");
-  if (parts.length < 2) return fallback;
-  const ext = parts.pop().trim().toLowerCase();
-  return ext || fallback;
-}
-
-function buildGithubContentsUrl(filePath) {
-  const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
-  return `https://api.github.com/repos/${config.githubRepo}/contents/${encodedPath}`;
-}
-
 // ============ API CALLS ============
 async function updateSocioStatus(cod, status, paso) {
   try {
@@ -539,64 +448,51 @@ async function updateSocioStatus(cod, status, paso) {
   }
 }
 
-async function uploadToGithub(filePath, fileContent, commitMessage, allowAuthRetry = true) {
+async function uploadToGithub(filePath, fileContent, commitMessage) {
   if (!config.githubRepo || !config.githubToken) {
-    const configured = configureGithubAccess({ forceToken: !config.githubToken });
-    if (!configured || !config.githubRepo || !config.githubToken) return false;
+    alert("⚠ Falta la configuración del repositorio o token de GitHub en el código");
+    return false;
   }
+  const apiUrl = `https://api.github.com/repos/${config.githubRepo}/contents/${filePath}`;
   try {
-    const githubUrl = buildGithubContentsUrl(filePath);
+    // Primero comprobar si el archivo ya existe para obtener su SHA
     let existingSha = null;
-
-    const currentFileRes = await fetch(githubUrl, {
-      method: "GET",
-      headers: getGithubAuthHeaders()
-    });
-
-    if (currentFileRes.ok) {
-      const currentFile = await currentFileRes.json();
-      existingSha = currentFile.sha;
-    } else if (currentFileRes.status !== 404) {
-      const getErr = await parseGithubError(currentFileRes);
-      if (isGithubAuthError(currentFileRes.status, getErr.message) && allowAuthRetry) {
-        alert("GitHub ha rechazado las credenciales. Introduce un token válido para continuar.");
-        const configured = configureGithubAccess({ forceToken: true });
-        if (configured) {
-          return uploadToGithub(filePath, fileContent, commitMessage, false);
+    try {
+      const checkRes = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Authorization": "token " + config.githubToken,
+          "Accept": "application/vnd.github+json"
         }
-        return false;
+      });
+      if (checkRes.ok) {
+        const data = await checkRes.json();
+        existingSha = data.sha;
       }
-      alert("Error verificando archivo en GitHub: " + (getErr.message || ("HTTP " + currentFileRes.status)));
-      return false;
-    }
+    } catch(e) { /* archivo no existe, seguir */ }
 
-    const payload = {
+    const body = {
       message: commitMessage,
-      content: fileContent // base64
+      content: fileContent
     };
-    if (existingSha) payload.sha = existingSha;
+    if (existingSha) body.sha = existingSha;
 
-    const res = await fetch(githubUrl, {
+    const res = await fetch(apiUrl, {
       method: "PUT",
       headers: {
-        ...getGithubAuthHeaders(),
+        "Authorization": "token " + config.githubToken,
+        "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body)
     });
     if (res.ok) return true;
-    const err = await parseGithubError(res);
-    if (isGithubAuthError(res.status, err.message) && allowAuthRetry) {
-      alert("Credenciales de GitHub inválidas o sin permisos para este repositorio. Configura un token con 'Contents: Read and write'.");
-      const configured = configureGithubAccess({ forceToken: true });
-      if (configured) {
-        return uploadToGithub(filePath, fileContent, commitMessage, false);
-      }
-      return false;
-    }
-    alert("Error subiendo a GitHub: " + (err.message || ("HTTP " + res.status)));
+    const err = await res.json();
+    console.error("GitHub error:", err);
+    alert("Error subiendo a GitHub (" + res.status + "): " + (err.message || "desconocido") + "\n\nRevisa la consola (F12) para más detalles.");
     return false;
   } catch(e) {
+    console.error("Network error:", e);
     alert("Error de conexión con GitHub: " + e.message);
     return false;
   }
@@ -741,19 +637,19 @@ function renderDetail() {
   else if (currentStep === 2) {
     const fileHTML = attachedFile
       ? `<div class="file-drop has-file" onclick="document.getElementById('fileInput').click()">
-           <div class="file-info">✓ ${attachedFile.renamedName || attachedFile.name} (${(attachedFile.size/1024).toFixed(1)} KB)</div>
+           <div class="file-info">✓ ${attachedFile.name} (${(attachedFile.size/1024).toFixed(1)} KB)</div>
            <div style="color:var(--text-muted); font-size:11px; margin-top:4px">Click para cambiar</div>
          </div>`
       : `<div class="file-drop" onclick="document.getElementById('fileInput').click()">
            <div style="font-size:32px; margin-bottom:8px">📎</div>
-           <div style="color:var(--text-secondary)">Click para seleccionar el PDF firmado</div>
-           <div style="color:var(--text-muted); font-size:11px; margin-top:4px">Se guardará como DNI.pdf</div>
+           <div style="color:var(--text-secondary)">Click para seleccionar el archivo escaneado</div>
+           <div style="color:var(--text-muted); font-size:11px; margin-top:4px">PDF, JPG o PNG</div>
          </div>`;
 
     stepContent = `
       <h3>Paso 3: Adjuntar Autorización Firmada</h3>
-      <p>Adjunte la autorización firmada en PDF. Se renombrará automáticamente con el DNI del socio y se subirá a GitHub.</p>
-      <input type="file" id="fileInput" accept=".pdf" onchange="handleFileAttach(this)" style="display:none">
+      <p>Escanee la autorización firmada por el socio y adjúntela aquí. Se subirá al repositorio de GitHub.</p>
+      <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileAttach(this)" style="display:none">
       ${fileHTML}
       <div style="display:flex; gap:10px; flex-wrap:wrap">
         <button class="btn btn-blue" onclick="uploadAutorizacion()" ${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir a GitHub</button>
@@ -772,13 +668,13 @@ function renderDetail() {
         <a href="https://www.fega.gob.es" target="_blank" rel="noopener" class="btn btn-blue" style="text-decoration:none">🌐 Abrir Web FEGA</a>
       </div>
       <input type="file" id="justificanteInput" accept=".pdf" onchange="handleJustificante(this)" style="display:none">
-      <div class="file-drop \${attachedFile ? 'has-file' : ''}" onclick="document.getElementById('justificanteInput').click()" style="margin-bottom:16px">
-        \${attachedFile
-          ? \`<div class="file-info">✓ Justificante: \${attachedFile.renamedName || attachedFile.name}</div>\`
-          : \`<div style="color:var(--text-secondary)">📄 Adjuntar justificante PDF del FEGA</div>\`}
+      <div class="file-drop ${attachedFile ? 'has-file' : ''}" onclick="document.getElementById('justificanteInput').click()" style="margin-bottom:16px">
+        ${attachedFile
+          ? `<div class="file-info">✓ Justificante: ${attachedFile.renamedName || attachedFile.name}</div>`
+          : `<div style="color:var(--text-secondary)">📄 Adjuntar justificante PDF del FEGA</div>`}
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap">
-        <button class="btn btn-blue" onclick="uploadJustificante()" \${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir justificante a GitHub</button>
+        <button class="btn btn-blue" onclick="uploadJustificante()" ${!attachedFile ? 'disabled style="opacity:0.5"' : ''}>⬆ Subir justificante a GitHub</button>
         <button class="btn btn-gold" onclick="advanceStep()">Marcar como aceptada →</button>
       </div>
     `;
@@ -788,12 +684,13 @@ function renderDetail() {
   else if (currentStep === 4) {
     stepContent = `
       <h3>Paso 5: Notificación por WhatsApp</h3>
-      <p>Envíe un mensaje de WhatsApp al socio informándole de que el trámite ha sido completado.</p>
+      <p>Envíe un mensaje de WhatsApp al socio informándole de que el trámite ha sido completado. Se incluirá un enlace para descargar el justificante.</p>
       <div class="wa-preview">
         <div class="wa-preview-label">Vista previa del mensaje</div>
         <p>Estimado/a socio/a <strong>${s.nombre}</strong>,</p>
         <p>Le informamos que se ha completado el trámite de aceptación de la ayuda del FEGA por daños ocasionados por el tren de borrascas de 2026.</p>
         <p>Beneficiario: ${s.nombreFega || s.nombre}<br>NIF: ${s.nif}<br>Importe: <strong style="color:var(--green)">${formatCurrency(s.importe)}</strong></p>
+        <p>Puede descargar el justificante en el siguiente enlace:<br><span style="color:var(--blue); font-size:11px; word-break:break-all">https://github.com/${config.githubRepo}/raw/main/justificantes/${s.nif}_justificante.pdf</span></p>
         <p>Atentamente,<br>${rep.nombre}</p>
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap">
@@ -1005,14 +902,8 @@ async function printAutorizacion() {
 function handleFileAttach(input) {
   const file = input.files[0];
   if (file) {
-    const ext = getFileExtension(file.name, "");
-    if (ext !== "pdf") {
-      alert("La autorización debe adjuntarse en formato PDF.");
-      input.value = "";
-      return;
-    }
-    const safeNif = sanitizeNifForFilename(selectedSocio && selectedSocio.nif);
-    const renamedName = safeNif + ".pdf";
+    const ext = file.name.split(".").pop();
+    const renamedName = selectedSocio.nif + "_autorizacion." + ext;
     attachedFile = file;
     attachedFile.renamedName = renamedName;
     renderDetail();
@@ -1023,9 +914,8 @@ function handleJustificante(input) {
   const file = input.files[0];
   if (file) {
     // Renombrar automáticamente con el NIF del socio
-    const ext = getFileExtension(file.name, "pdf");
-    const safeNif = sanitizeNifForFilename(selectedSocio && selectedSocio.nif);
-    const renamedName = safeNif + "_justificante." + ext;
+    const ext = file.name.split(".").pop();
+    const renamedName = selectedSocio.nif + "_justificante." + ext;
     attachedFile = file;
     attachedFile.renamedName = renamedName;
     renderDetail();
@@ -1037,10 +927,10 @@ async function uploadAutorizacion() {
   const reader = new FileReader();
   reader.onload = async function() {
     const base64 = reader.result.split(",")[1];
-    const renamedName = attachedFile.renamedName || (sanitizeNifForFilename(selectedSocio.nif) + ".pdf");
-    const path = `autorizaciones/${renamedName}`;
+    const ext = attachedFile.name.split(".").pop();
+    const path = `autorizaciones/${selectedSocio.nif}_autorizacion.${ext}`;
     const ok = await uploadToGithub(path, base64, `Autorización firmada socio ${selectedSocio.cod} - ${selectedSocio.nombre}`);
-    if (ok) alert("✓ Autorización subida correctamente a GitHub como: " + renamedName);
+    if (ok) alert("✓ Autorización subida correctamente a GitHub");
   };
   reader.readAsDataURL(attachedFile);
 }
@@ -1063,6 +953,7 @@ async function uploadJustificante() {
 function sendWhatsApp() {
   const s = selectedSocio;
   const rep = config.representante;
+  const justificanteUrl = `https://github.com/${config.githubRepo}/raw/main/justificantes/${s.nif}_justificante.pdf`;
   const msg = encodeURIComponent(
     `Estimado/a socio/a ${s.nombre},\n\n` +
     `Le informamos que se ha completado el trámite de aceptación de la ayuda del FEGA por daños ocasionados por el tren de borrascas de 2026.\n\n` +
@@ -1070,7 +961,7 @@ function sendWhatsApp() {
     `- Beneficiario: ${s.nombreFega || s.nombre}\n` +
     `- NIF: ${s.nif}\n` +
     `- Importe: ${formatCurrency(s.importe)}\n\n` +
-    `Se adjunta justificante del trámite.\n\n` +
+    `Puede descargar el justificante del trámite en el siguiente enlace:\n${justificanteUrl}\n\n` +
     `Atentamente,\n${rep.nombre}`
   );
   window.open(`https://wa.me/?text=${msg}`, "_blank");
